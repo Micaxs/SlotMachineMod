@@ -36,8 +36,8 @@ public class SlotMachineMenu extends AbstractContainerMenu {
         addPlayerHotbar(inv);
 
         this.blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(iItemHandler -> {
-            this.addSlot(new SlotItemHandler(iItemHandler, 0, 8, 34));
-            this.addSlot(new SlotItemHandler(iItemHandler, 1, 152, 34));
+            this.addSlot(new SlotItemHandler(iItemHandler, 0, 22, 34));
+            this.addSlot(new SlotItemHandler(iItemHandler, 1, 135, 34));
         });
 
 

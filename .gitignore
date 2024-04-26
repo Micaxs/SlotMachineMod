@@ -3,3 +3,5 @@
 /run-data
 /run
 /src/generated
+/.gradle
+/.idea
