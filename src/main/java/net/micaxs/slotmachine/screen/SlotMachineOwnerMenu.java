@@ -3,35 +3,29 @@ package net.micaxs.slotmachine.screen;
 import net.micaxs.slotmachine.block.ModBlocks;
 import net.micaxs.slotmachine.block.entity.SlotMachineBlockEntity;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.SlotItemHandler;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.Objects;
 
 
-public class SlotMachineMenu extends AbstractContainerMenu {
+public class SlotMachineOwnerMenu extends AbstractContainerMenu {
 
     public static SlotMachineBlockEntity blockEntity;
     private final Level level;
     private final ContainerData data;
 
 
-    public SlotMachineMenu(int pContainerId, Inventory inv, FriendlyByteBuf extraData) {
+    public SlotMachineOwnerMenu(int pContainerId, Inventory inv, FriendlyByteBuf extraData) {
         this(pContainerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(2));
     }
 
-    public SlotMachineMenu(int pContainerId, Inventory inv, BlockEntity entity, ContainerData data) {
-        super(ModMenuTypes.SLOT_MACHINE_MENU.get(), pContainerId);
+    public SlotMachineOwnerMenu(int pContainerId, Inventory inv, BlockEntity entity, SimpleContainerData data) {
+        super(ModMenuTypes.SLOT_MACHINE_OWNER_MENU.get(), pContainerId);
         checkContainerSize(inv, 2);
         blockEntity = ((SlotMachineBlockEntity) entity);
         this.level = inv.player.level();
@@ -40,14 +34,13 @@ public class SlotMachineMenu extends AbstractContainerMenu {
         addPlayerInventory(inv);
         addPlayerHotbar(inv);
 
-        blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(iItemHandler -> {
-            this.addSlot(new SlotItemHandler(iItemHandler, 0, 22, 34));
-            this.addSlot(new SlotItemHandler(iItemHandler, 1, 135, 34));
+        blockEntity.getOwnerItemHandler().ifPresent(iItemHandler -> {
+            for (int i = 0; i < 9; i++) {
+                this.addSlot(new SlotItemHandler(iItemHandler, i, 63 + (i % 3) * 18, 16 + (i / 3) * 18));
+            }
         });
 
-
         addDataSlots(data);
-
     }
 
     public boolean isSpinning() {
@@ -64,7 +57,7 @@ public class SlotMachineMenu extends AbstractContainerMenu {
     private static final int TE_INVENTORY_FIRST_SLOT_INDEX = VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT;
 
     // THIS YOU HAVE TO DEFINE!
-    private static final int TE_INVENTORY_SLOT_COUNT = 2;  // must be the number of slots you have!
+    private static final int TE_INVENTORY_SLOT_COUNT = 9;  // must be the number of slots you have!
     @Override
     public ItemStack quickMoveStack(Player playerIn, int pIndex) {
         Slot sourceSlot = slots.get(pIndex);
@@ -117,15 +110,5 @@ public class SlotMachineMenu extends AbstractContainerMenu {
         for (int i = 0; i < 9; ++i) {
             this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 142));
         }
-    }
-
-    public int[] stopSpin() {
-        this.data.set(0, 1);
-        return blockEntity.stopSpin();
-    }
-
-    public int[] startSpin() {
-        this.data.set(0, 0);
-        return blockEntity.startSpin();
     }
 }

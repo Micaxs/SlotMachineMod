@@ -2,12 +2,16 @@ package net.micaxs.slotmachine.block;
 
 import net.micaxs.slotmachine.block.entity.ModBlockEntities;
 import net.micaxs.slotmachine.block.entity.SlotMachineBlockEntity;
+import net.micaxs.slotmachine.screen.SlotMachineOwnerMenuProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -76,6 +80,29 @@ public class SlotMachineBlock extends BaseEntityBlock {
     }
 
     @Override
+    public void setPlacedBy(Level world, BlockPos pos, BlockState state, @Nullable LivingEntity entity, ItemStack stack) {
+        if (entity instanceof ServerPlayer) {
+            BlockEntity blockEntity = world.getBlockEntity(pos);
+            if (blockEntity instanceof SlotMachineBlockEntity) {
+                ((SlotMachineBlockEntity) blockEntity).setOwner(entity.getUUID());
+            }
+        }
+    }
+
+    @Override
+    public void playerWillDestroy(Level pLevel, BlockPos pPos, BlockState pState, Player pPlayer) {
+        BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
+        if (blockEntity instanceof SlotMachineBlockEntity slotMachineBlockEntity) {
+            if (!slotMachineBlockEntity.getOwner().equals(pPlayer.getUUID())) {
+                pLevel.setBlock(pPos, pState, 3);
+                pPlayer.displayClientMessage(Component.literal("You are not the owner of this block."), true);
+                return;
+            }
+        }
+        super.playerWillDestroy(pLevel, pPos, pState, pPlayer);
+    }
+
+    @Override
     public void onRemove(BlockState pState, Level pLevel, BlockPos pPos, BlockState pNewState, boolean pIsMoving) {
         if (pState.getBlock() != pNewState.getBlock()) {
             BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
@@ -90,8 +117,14 @@ public class SlotMachineBlock extends BaseEntityBlock {
     public InteractionResult use(BlockState pState, Level pLevel, BlockPos pPos, Player pPlayer, InteractionHand pHand, BlockHitResult pHit) {
         if (!pLevel.isClientSide()) {
             BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
-            if (blockEntity instanceof SlotMachineBlockEntity) {
-                NetworkHooks.openScreen(((ServerPlayer)pPlayer), (SlotMachineBlockEntity)blockEntity, pPos);
+            if (blockEntity instanceof SlotMachineBlockEntity slotMachineBlockEntity) {
+                if (pPlayer.isCrouching() && slotMachineBlockEntity.getOwner().equals(pPlayer.getUUID())) {
+                    // Open the owner menu if the player is the owner and is sneaking
+                    NetworkHooks.openScreen((ServerPlayer) pPlayer, new SlotMachineOwnerMenuProvider(slotMachineBlockEntity), pPos);
+                } else {
+                    // Open the regular menu otherwise
+                    NetworkHooks.openScreen((ServerPlayer) pPlayer, slotMachineBlockEntity, pPos);
+                }
             } else {
                 throw new IllegalStateException("Container provider went yeet?");
             }

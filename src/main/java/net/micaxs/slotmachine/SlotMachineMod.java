@@ -6,6 +6,8 @@ import net.micaxs.slotmachine.block.ModItems;
 import net.micaxs.slotmachine.block.entity.ModBlockEntities;
 import net.micaxs.slotmachine.network.PacketHandler;
 import net.micaxs.slotmachine.screen.ModMenuTypes;
+import net.micaxs.slotmachine.screen.SlotMachineOwnerMenu;
+import net.micaxs.slotmachine.screen.SlotMachineOwnerScreen;
 import net.micaxs.slotmachine.screen.SlotMachineScreen;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -66,6 +68,7 @@ public class SlotMachineMod
         public static void onClientSetup(FMLClientSetupEvent event)
         {
             MenuScreens.register(ModMenuTypes.SLOT_MACHINE_MENU.get(), SlotMachineScreen::new);
+            MenuScreens.register(ModMenuTypes.SLOT_MACHINE_OWNER_MENU.get(), SlotMachineOwnerScreen::new);
         }
     }
 }

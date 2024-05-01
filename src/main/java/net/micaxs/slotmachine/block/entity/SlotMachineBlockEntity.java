@@ -30,12 +30,15 @@ import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.UUID;
+
 public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider {
 
     private final ItemStackHandler itemHandler = new ItemStackHandler(2) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
+            assert level != null;
             if (!level.isClientSide()) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
             }
@@ -50,12 +53,32 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
             };
         }
     };
+
+    private final ItemStackHandler ownerItemHandler = new ItemStackHandler(9) {
+        @Override
+        protected void onContentsChanged(int slot) {
+            setChanged();
+            assert level != null;
+            if (!level.isClientSide()) {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            }
+        }
+
+        @Override
+        public boolean isItemValid(int slot, @NotNull ItemStack stack) {
+            return switch (slot) {
+                case 0,1,2,3,4,5,6,7,8,9 -> stack.getItem().equals(Config.validBetItem);
+                default -> super.isItemValid(slot, stack);
+            };
+        }
+    };
+
     private static final int INPUT_SLOT = 0;
     private static final int OUTPUT_SLOT = 1;
 
     public ItemStack BET_ITEM;
-
     private LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.empty();
+    private LazyOptional<IItemHandler> lazyOwnerItemHandler = LazyOptional.empty();
 
     protected final ContainerData data;
 
@@ -63,7 +86,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
     private int slot2;
     private int slot3;
     private int stopped;
-
+    private UUID ownerUUID;
 
     public SlotMachineBlockEntity(BlockPos pPos, BlockState pBlockState) {
         super(ModBlockEntities.SLOT_MACHINE_BE.get(), pPos, pBlockState);
@@ -90,6 +113,13 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         };
     }
 
+    public void setOwner(UUID ownerUUID) {
+        this.ownerUUID = ownerUUID;
+    }
+
+    public UUID getOwnerUUID() {
+        return ownerUUID;
+    }
 
     public void drops() {
         SimpleContainer inventory = new SimpleContainer(itemHandler.getSlots());
@@ -107,16 +137,22 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         return super.getCapability(cap, side);
     }
 
+    public LazyOptional<IItemHandler> getOwnerItemHandler() {
+        return lazyOwnerItemHandler;
+    }
+
     @Override
     public void onLoad() {
         super.onLoad();
         lazyItemHandler = LazyOptional.of(() -> itemHandler);
+        lazyOwnerItemHandler = LazyOptional.of(() -> ownerItemHandler);
     }
 
     @Override
     public void invalidateCaps() {
         super.invalidateCaps();
         lazyItemHandler.invalidate();
+        lazyOwnerItemHandler.invalidate();
     }
 
     @Override
@@ -135,6 +171,10 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         pTag.put("inventory", itemHandler.serializeNBT());
         pTag.putInt("slot_machine.stopped", stopped);
 
+        if (ownerUUID != null) {
+            pTag.putUUID("ownerUUID", ownerUUID);
+        }
+
         super.saveAdditional(pTag);
     }
 
@@ -143,18 +183,67 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         super.load(pTag);
         itemHandler.deserializeNBT(pTag.getCompound("inventory"));
         stopped = pTag.getInt("slot_machine.stopped");
+        if (pTag.contains("ownerUUID")) {
+            ownerUUID = pTag.getUUID("ownerUUID");
+        }
     }
 
     public void tick(Level pLevel, BlockPos pPos, BlockState pState, BlockEntity pBlockEntity) {
         setChanged(pLevel, pPos, pState);
     }
 
+    private void addToOwnerInventory() {
+        ItemStack betItemOwner = new ItemStack(Config.validBetItem);
+        for (int i = 0; i < ownerItemHandler.getSlots(); i++) {
+            ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
+            if (stackInSlot.isEmpty() || (stackInSlot.getItem() == betItemOwner.getItem() && stackInSlot.getCount() < stackInSlot.getMaxStackSize())) {
+                if (stackInSlot.isEmpty()) {
+                    ownerItemHandler.setStackInSlot(i, betItemOwner);
+                } else {
+                    stackInSlot.setCount(stackInSlot.getCount() + 1);
+                    ownerItemHandler.setStackInSlot(i, stackInSlot);
+                }
+                break;
+            }
+        }
+    }
+
+    private void removeFromOwnerInventory(int amount) {
+        for (int i = ownerItemHandler.getSlots() - 1; i >= 0 && amount > 0; i--) {
+            ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
+            if (!stackInSlot.isEmpty() && stackInSlot.getItem() == Config.validBetItem) {
+                int itemsInSlot = stackInSlot.getCount();
+                if (itemsInSlot >= amount) {
+                    stackInSlot.setCount(itemsInSlot - amount);
+                    ownerItemHandler.setStackInSlot(i, stackInSlot);
+                    break;
+                } else {
+                    amount -= itemsInSlot;
+                    ownerItemHandler.setStackInSlot(i, ItemStack.EMPTY);
+                }
+            }
+        }
+    }
+
+    public boolean isSlotMachineInventoryFull() {
+        for (int i = 0; i < ownerItemHandler.getSlots(); i++) {
+            ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
+            if (stackInSlot.isEmpty() || stackInSlot.getCount() < stackInSlot.getMaxStackSize()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     private void payout(int slot1, int slot2, int slot3) {
         // TODO: Add A Jackpot system (everytime someone loses the jackpot increases by 1 and it should be displayed in the UI somewhere)
+        addToOwnerInventory();
 
         // 3 the same -> x2
         if (slot1 == slot2 && slot2 == slot3) {
+            // Remove 3 from the ownerItemHandler
+            removeFromOwnerInventory(Config.triplePayoutAmount);
+
             ItemStack betItem = this.itemHandler.extractItem(INPUT_SLOT, 1, false);
             betItem.setCount(Config.triplePayoutAmount);
 
@@ -168,6 +257,8 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
                 // You screwed as you dun fucked up somehow.
             }
         } else if (slot1 == slot2 || slot2 == slot3 || slot1 == slot3) {
+            removeFromOwnerInventory(Config.doublePayoutAmount);
+
             ItemStack betItem = this.itemHandler.extractItem(INPUT_SLOT, 1, false);
             betItem.setCount(Config.doublePayoutAmount);
 
@@ -239,6 +330,21 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
             } while (slot1 == slot2 || slot2 == slot3 || slot1 == slot3);
         }
 
+        // Rigged System when we don't have any profits in the slots machine yet!
+        int totalBetItems = 0;
+        for (int i = 0; i < 9; i++) {
+            totalBetItems += ownerItemHandler.getStackInSlot(i).getCount();
+        }
+        if (totalBetItems <= 4) {
+            slot1 = (int) (Math.random() * 5 + 1);
+            do {
+                slot2 = (int) (Math.random() * 5 + 1);
+            } while (slot2 == slot1);
+            do {
+                slot3 = (int) (Math.random() * 5 + 1);
+            } while (slot3 == slot1 || slot3 == slot2);
+        }
+
         // Call payout directly when the spin stops
         payout(slot1, slot2, slot3);
 
@@ -261,5 +367,9 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         } else {
             return new int[]{6, 6, 6};
         }
+    }
+
+    public Object getOwner() {
+        return ownerUUID;
     }
 }

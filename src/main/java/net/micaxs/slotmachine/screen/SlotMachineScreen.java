@@ -1,27 +1,21 @@
 package net.micaxs.slotmachine.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.micaxs.slotmachine.SlotMachineMod;
-import net.micaxs.slotmachine.block.entity.SlotMachineBlockEntity;
 import net.micaxs.slotmachine.network.PacketHandler;
 import net.micaxs.slotmachine.network.packet.SlotsC2SPacket;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Renderable;
-import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.client.gui.components.Button;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
 public class SlotMachineScreen extends AbstractContainerScreen<SlotMachineMenu> {
@@ -38,6 +32,8 @@ public class SlotMachineScreen extends AbstractContainerScreen<SlotMachineMenu> 
     private Button stopButton;
     private String message = "";
 
+    private boolean outOfService;
+
     @Override
     protected void init() {
         super.init();
@@ -49,17 +45,28 @@ public class SlotMachineScreen extends AbstractContainerScreen<SlotMachineMenu> 
 
         results = new int[]{6,6,6};
 
-        this.spinButton = new Button.Builder(Component.translatable("slots.gui.spin"), pButton -> {
-            PacketHandler.sendToServer(new SlotsC2SPacket(SlotMachineMenu.blockEntity.getBlockPos(), true));
-            results = new int[]{0, 0, 0}; // Add this line
-        }).pos(x + 64, y + 68).size(44, 11).build();
+        if (SlotMachineMenu.blockEntity.isSlotMachineInventoryFull()) {
+            this.outOfService = true;
+            this.message = "Out of Order";
+        } else {
+            this.outOfService = false;
+            this.message = "";
+        }
 
-        this.stopButton = new Button.Builder(Component.translatable("slots.gui.stop"), pButton -> {
-            PacketHandler.sendToServer(new SlotsC2SPacket(SlotMachineMenu.blockEntity.getBlockPos(), false));
-        }).pos(x + 64, y + 68).size(44, 11).build();
 
-        this.addRenderableWidget(spinButton);
-        this.addRenderableWidget(stopButton);
+        if (!outOfService) {
+            this.spinButton = new Button.Builder(Component.translatable("slots.gui.spin"), pButton -> {
+                PacketHandler.sendToServer(new SlotsC2SPacket(SlotMachineMenu.blockEntity.getBlockPos(), true));
+                results = new int[]{0, 0, 0}; // Add this line
+            }).pos(x + 64, y + 68).size(44, 11).build();
+
+            this.stopButton = new Button.Builder(Component.translatable("slots.gui.stop"), pButton -> {
+                PacketHandler.sendToServer(new SlotsC2SPacket(SlotMachineMenu.blockEntity.getBlockPos(), false));
+            }).pos(x + 64, y + 68).size(44, 11).build();
+
+            this.addRenderableWidget(spinButton);
+            this.addRenderableWidget(stopButton);
+        }
     }
 
     public void updateResults(int[] newResults) {
@@ -92,12 +99,14 @@ public class SlotMachineScreen extends AbstractContainerScreen<SlotMachineMenu> 
 
         guiGraphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
 
-        if (results[0] != 0 && results[1] != 0 && results[2] != 0) {
-            drawSlotImageInSlot(guiGraphics, x + 59, y + 21, results[0]);  // Slot 1
-            drawSlotImageInSlot(guiGraphics, x + 78, y + 21, results[1]);  // Slot 2
-            drawSlotImageInSlot(guiGraphics, x + 97, y + 21, results[2]);  // Slot 3
-        } else {
-            renderSlotWheels(guiGraphics, x, y);
+        if (!outOfService) {
+            if (results[0] != 0 && results[1] != 0 && results[2] != 0) {
+                drawSlotImageInSlot(guiGraphics, x + 59, y + 21, results[0]);  // Slot 1
+                drawSlotImageInSlot(guiGraphics, x + 78, y + 21, results[1]);  // Slot 2
+                drawSlotImageInSlot(guiGraphics, x + 97, y + 21, results[2]);  // Slot 3
+            } else {
+                renderSlotWheels(guiGraphics, x, y);
+            }
         }
 
     }
@@ -161,13 +170,24 @@ public class SlotMachineScreen extends AbstractContainerScreen<SlotMachineMenu> 
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
         renderBackground(guiGraphics);
 
-        stopButton.visible = !areResutlsInYet();
-        spinButton.visible = !stopButton.visible;
+        if (!outOfService) {
+            stopButton.visible = !areResutlsInYet();
+            spinButton.visible = !stopButton.visible;
+
+            // draw a filled rectangle of 100x50 in center of the window
+            guiGraphics.fill(this.width / 2 - 50, this.height / 2 - 25, this.width / 2 + 50, this.height / 2 + 25, 0xFF00FF00); // 0xFF00FF00 is the color green
+
+        }
 
         super.render(guiGraphics, mouseX, mouseY, delta);
         renderTooltip(guiGraphics, mouseX, mouseY);
 
         int messageWidth = Minecraft.getInstance().font.width(this.message);
-        guiGraphics.drawString(Minecraft.getInstance().font, this.message, (int) ((this.width - messageWidth) / 2f), (int) (this.height / 2f) - 75, 0xFFFFFF);
+
+        if (Objects.equals(this.message, "Out of Order")) {
+            guiGraphics.drawString(Minecraft.getInstance().font, this.message, (int) ((this.width - messageWidth) / 2f), (int) (this.height / 2f) - 45, 0xFF0000);
+        } else {
+            guiGraphics.drawString(Minecraft.getInstance().font, this.message, (int) ((this.width - messageWidth) / 2f), (int) (this.height / 2f) - 75, 0xFFFFFF);
+        }
     }
 }
