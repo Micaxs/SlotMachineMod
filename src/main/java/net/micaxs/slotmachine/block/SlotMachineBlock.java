@@ -108,6 +108,7 @@ public class SlotMachineBlock extends BaseEntityBlock {
             BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
             if (blockEntity instanceof SlotMachineBlockEntity) {
                 ((SlotMachineBlockEntity) blockEntity).drops();
+                ((SlotMachineBlockEntity) blockEntity).dropOwnerItems();
             }
         }
         super.onRemove(pState, pLevel, pPos, pNewState, pIsMoving);

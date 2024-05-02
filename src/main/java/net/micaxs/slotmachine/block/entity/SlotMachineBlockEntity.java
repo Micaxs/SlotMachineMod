@@ -12,6 +12,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,6 +31,8 @@ import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider {
@@ -47,7 +50,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         @Override
         public boolean isItemValid(int slot, @NotNull ItemStack stack) {
             return switch (slot) {
-                case 0 -> stack.getItem().equals(Config.validBetItem);
+                case 0 -> Config.validBetItems.contains(stack.getItem());
                 case 1 -> false; // Don't put stuff in output slot you dum dum.
                 default -> super.isItemValid(slot, stack);
             };
@@ -67,7 +70,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         @Override
         public boolean isItemValid(int slot, @NotNull ItemStack stack) {
             return switch (slot) {
-                case 0,1,2,3,4,5,6,7,8,9 -> stack.getItem().equals(Config.validBetItem);
+                case 0,1,2,3,4,5,6,7,8,9 -> Config.validBetItems.contains(stack.getItem());
                 default -> super.isItemValid(slot, stack);
             };
         }
@@ -129,6 +132,18 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         Containers.dropContents(this.level, this.worldPosition, inventory);
     }
 
+    public void dropOwnerItems() {
+        if (level != null && !level.isClientSide) {
+            for (int i = 0; i < ownerItemHandler.getSlots(); i++) {
+                ItemStack stack = ownerItemHandler.getStackInSlot(i);
+                if (!stack.isEmpty()) {
+                    ItemEntity itemEntity = new ItemEntity(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), stack);
+                    level.addFreshEntity(itemEntity);
+                }
+            }
+        }
+    }
+
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
         if (cap == ForgeCapabilities.ITEM_HANDLER) {
@@ -169,6 +184,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
     @Override
     protected void saveAdditional(CompoundTag pTag) {
         pTag.put("inventory", itemHandler.serializeNBT());
+        pTag.put("ownerInventory", ownerItemHandler.serializeNBT());
         pTag.putInt("slot_machine.stopped", stopped);
 
         if (ownerUUID != null) {
@@ -182,6 +198,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
     public void load(CompoundTag pTag) {
         super.load(pTag);
         itemHandler.deserializeNBT(pTag.getCompound("inventory"));
+        ownerItemHandler.deserializeNBT(pTag.getCompound("ownerInventory"));
         stopped = pTag.getInt("slot_machine.stopped");
         if (pTag.contains("ownerUUID")) {
             ownerUUID = pTag.getUUID("ownerUUID");
@@ -193,25 +210,25 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     private void addToOwnerInventory() {
-        ItemStack betItemOwner = new ItemStack(Config.validBetItem);
+        ItemStack betItemOwner = new ItemStack(BET_ITEM.getItem()); // Get the item that was actually bet
         for (int i = 0; i < ownerItemHandler.getSlots(); i++) {
             ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
-            if (stackInSlot.isEmpty() || (stackInSlot.getItem() == betItemOwner.getItem() && stackInSlot.getCount() < stackInSlot.getMaxStackSize())) {
-                if (stackInSlot.isEmpty()) {
-                    ownerItemHandler.setStackInSlot(i, betItemOwner);
-                } else {
-                    stackInSlot.setCount(stackInSlot.getCount() + 1);
-                    ownerItemHandler.setStackInSlot(i, stackInSlot);
-                }
+            if (stackInSlot.isEmpty()) {
+                ownerItemHandler.setStackInSlot(i, betItemOwner);
+                break;
+            } else if (Config.validBetItems.contains(stackInSlot.getItem()) && stackInSlot.getCount() < stackInSlot.getMaxStackSize() && stackInSlot.getItem() == betItemOwner.getItem()) {
+                stackInSlot.setCount(stackInSlot.getCount() + 1);
+                ownerItemHandler.setStackInSlot(i, stackInSlot);
                 break;
             }
         }
     }
 
     private void removeFromOwnerInventory(int amount) {
+        Item betItem = BET_ITEM.getItem(); // Get the item that was actually bet
         for (int i = ownerItemHandler.getSlots() - 1; i >= 0 && amount > 0; i--) {
             ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
-            if (!stackInSlot.isEmpty() && stackInSlot.getItem() == Config.validBetItem) {
+            if (!stackInSlot.isEmpty() && stackInSlot.getItem() == betItem) {
                 int itemsInSlot = stackInSlot.getCount();
                 if (itemsInSlot >= amount) {
                     stackInSlot.setCount(itemsInSlot - amount);
@@ -244,7 +261,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
             // Remove 3 from the ownerItemHandler
             removeFromOwnerInventory(Config.triplePayoutAmount);
 
-            ItemStack betItem = this.itemHandler.extractItem(INPUT_SLOT, 1, false);
+            ItemStack betItem = BET_ITEM;
             betItem.setCount(Config.triplePayoutAmount);
 
             ItemStack outputSlotItem = this.itemHandler.getStackInSlot(OUTPUT_SLOT);
@@ -259,7 +276,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         } else if (slot1 == slot2 || slot2 == slot3 || slot1 == slot3) {
             removeFromOwnerInventory(Config.doublePayoutAmount);
 
-            ItemStack betItem = this.itemHandler.extractItem(INPUT_SLOT, 1, false);
+            ItemStack betItem = BET_ITEM;
             betItem.setCount(Config.doublePayoutAmount);
 
             ItemStack outputSlotItem = this.itemHandler.getStackInSlot(OUTPUT_SLOT);
@@ -271,8 +288,6 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
             } else {
                 // You screwed as you dun fucked up somehow.
             }
-        } else {
-            this.itemHandler.extractItem(INPUT_SLOT, 1, false);
         }
         setChanged();
     }
@@ -331,18 +346,23 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         }
 
         // Rigged System when we don't have any profits in the slots machine yet!
-        int totalBetItems = 0;
-        for (int i = 0; i < 9; i++) {
-            totalBetItems += ownerItemHandler.getStackInSlot(i).getCount();
+        Map<Item, Integer> itemCounts = new HashMap<>();
+        for (int i = 0; i < ownerItemHandler.getSlots(); i++) {
+            ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
+            itemCounts.put(stackInSlot.getItem(), itemCounts.getOrDefault(stackInSlot.getItem(), 0) + stackInSlot.getCount());
         }
-        if (totalBetItems <= 4) {
-            slot1 = (int) (Math.random() * 5 + 1);
-            do {
-                slot2 = (int) (Math.random() * 5 + 1);
-            } while (slot2 == slot1);
-            do {
-                slot3 = (int) (Math.random() * 5 + 1);
-            } while (slot3 == slot1 || slot3 == slot2);
+
+        for (Map.Entry<Item, Integer> entry : itemCounts.entrySet()) {
+            if (entry.getKey() == BET_ITEM.getItem() && entry.getValue() < Config.triplePayoutAmount) {
+                slot1 = (int) (Math.random() * 5 + 1);
+                do {
+                    slot2 = (int) (Math.random() * 5 + 1);
+                } while (slot2 == slot1);
+                do {
+                    slot3 = (int) (Math.random() * 5 + 1);
+                } while (slot3 == slot1 || slot3 == slot2);
+                break;
+            }
         }
 
         // Call payout directly when the spin stops
@@ -357,7 +377,11 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
     public int[] startSpin() {
         BET_ITEM = this.itemHandler.getStackInSlot(INPUT_SLOT);
         ItemStack itemInOutputSlot = this.itemHandler.getStackInSlot(OUTPUT_SLOT);
-        if (BET_ITEM.getItem().equals(Config.validBetItem)) {
+
+        // Fixes the ability to start spinning and take out the betItem to cheeze the machine.
+        this.itemHandler.extractItem(INPUT_SLOT, 1, false);
+
+        if (Config.validBetItems.contains(BET_ITEM.getItem())) {
             if (itemInOutputSlot.isEmpty() || itemInOutputSlot.getItem() == BET_ITEM.getItem() && itemInOutputSlot.getCount() + Config.triplePayoutAmount < itemInOutputSlot.getMaxStackSize()) {
                 // We good to go...
                 return new int[]{0, 0, 0};
@@ -367,6 +391,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         } else {
             return new int[]{6, 6, 6};
         }
+
     }
 
     public Object getOwner() {

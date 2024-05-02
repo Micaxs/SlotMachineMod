@@ -36,7 +36,7 @@ public class SlotMachineOwnerMenu extends AbstractContainerMenu {
 
         blockEntity.getOwnerItemHandler().ifPresent(iItemHandler -> {
             for (int i = 0; i < 9; i++) {
-                this.addSlot(new SlotItemHandler(iItemHandler, i, 63 + (i % 3) * 18, 16 + (i / 3) * 18));
+                this.addSlot(new SlotItemHandler(iItemHandler, i, 62 + (i % 3) * 18, 16 + (i / 3) * 18));
             }
         });
 
