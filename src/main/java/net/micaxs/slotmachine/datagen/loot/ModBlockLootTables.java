@@ -18,6 +18,7 @@ public class ModBlockLootTables extends BlockLootSubProvider {
     protected void generate() {
         // Blocks drop them self
         this.dropSelf(ModBlocks.SLOT_MACHINE.get());
+        this.dropSelf(ModBlocks.BJ_MACHINE.get());
     }
 
     @Override

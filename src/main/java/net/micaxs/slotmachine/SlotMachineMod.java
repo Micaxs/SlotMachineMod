@@ -5,10 +5,7 @@ import net.micaxs.slotmachine.block.ModBlocks;
 import net.micaxs.slotmachine.block.ModItems;
 import net.micaxs.slotmachine.block.entity.ModBlockEntities;
 import net.micaxs.slotmachine.network.PacketHandler;
-import net.micaxs.slotmachine.screen.ModMenuTypes;
-import net.micaxs.slotmachine.screen.SlotMachineOwnerMenu;
-import net.micaxs.slotmachine.screen.SlotMachineOwnerScreen;
-import net.micaxs.slotmachine.screen.SlotMachineScreen;
+import net.micaxs.slotmachine.screen.*;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -67,8 +64,12 @@ public class SlotMachineMod
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event)
         {
+            // Slots Machine GUI
             MenuScreens.register(ModMenuTypes.SLOT_MACHINE_MENU.get(), SlotMachineScreen::new);
             MenuScreens.register(ModMenuTypes.SLOT_MACHINE_OWNER_MENU.get(), SlotMachineOwnerScreen::new);
+
+            // Blackjack Machine GUI
+            MenuScreens.register(ModMenuTypes.BJ_MACHINE_MENU.get(), BJMachineScreen::new);
         }
     }
 }

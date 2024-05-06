@@ -21,6 +21,9 @@ public class ModBlocks {
     public static final RegistryObject<Block> SLOT_MACHINE = registerBlock("slot_machine",
             () -> new SlotMachineBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
 
+    public static final RegistryObject<Block> BJ_MACHINE = registerBlock("bj_machine",
+            () -> new BJMachineBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+
 
     private static <T extends Block>RegistryObject<T> registerBlock(String name, Supplier<T> block) {
         RegistryObject<T> toReturn = BLOCKS.register(name, block);

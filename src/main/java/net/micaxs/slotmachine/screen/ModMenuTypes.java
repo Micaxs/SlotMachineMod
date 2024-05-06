@@ -15,12 +15,17 @@ public class ModMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(ForgeRegistries.MENU_TYPES, SlotMachineMod.MOD_ID);
 
-
+    // Slots Machine
     public static final RegistryObject<MenuType<SlotMachineMenu>> SLOT_MACHINE_MENU =
             registerMenuType("slot_machine_menu", SlotMachineMenu::new);
 
     public static final RegistryObject<MenuType<SlotMachineOwnerMenu>> SLOT_MACHINE_OWNER_MENU =
             registerMenuType("slot_machine_owner_menu", SlotMachineOwnerMenu::new);
+
+    // Blackjack Machine
+    public static final RegistryObject<MenuType<BJMachineMenu>> BJ_MACHINE_MENU =
+            registerMenuType("bj_machine_menu", BJMachineMenu::new);
+
 
 
     private static <T extends AbstractContainerMenu> RegistryObject<MenuType<T>> registerMenuType(String name, IContainerFactory<T> factory) {

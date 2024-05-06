@@ -2,7 +2,7 @@ package net.micaxs.slotmachine.block;
 
 import net.micaxs.slotmachine.block.entity.ModBlockEntities;
 import net.micaxs.slotmachine.block.entity.BJMachineBlockEntity;
-import net.micaxs.slotmachine.screen.BJMachineOwnerMenuProvider;
+//import net.micaxs.slotmachine.screen.BJMachineOwnerMenuProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -75,7 +75,7 @@ public class BJMachineBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
-        return new SlotMachineBlockEntity(blockPos, blockState);
+        return new BJMachineBlockEntity(blockPos, blockState);
 
     }
 
@@ -83,8 +83,8 @@ public class BJMachineBlock extends BaseEntityBlock {
     public void setPlacedBy(Level world, BlockPos pos, BlockState state, @Nullable LivingEntity entity, ItemStack stack) {
         if (entity instanceof ServerPlayer) {
             BlockEntity blockEntity = world.getBlockEntity(pos);
-            if (blockEntity instanceof SlotMachineBlockEntity) {
-                ((SlotMachineBlockEntity) blockEntity).setOwner(entity.getUUID());
+            if (blockEntity instanceof BJMachineBlockEntity) {
+                ((BJMachineBlockEntity) blockEntity).setOwner(entity.getUUID());
             }
         }
     }
@@ -92,8 +92,8 @@ public class BJMachineBlock extends BaseEntityBlock {
     @Override
     public void playerWillDestroy(Level pLevel, BlockPos pPos, BlockState pState, Player pPlayer) {
         BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
-        if (blockEntity instanceof SlotMachineBlockEntity slotMachineBlockEntity) {
-            if (!slotMachineBlockEntity.getOwner().equals(pPlayer.getUUID())) {
+        if (blockEntity instanceof BJMachineBlockEntity bjMachineBlockEntity) {
+            if (!bjMachineBlockEntity.getOwner().equals(pPlayer.getUUID())) {
                 pLevel.setBlock(pPos, pState, 3);
                 pPlayer.displayClientMessage(Component.literal("You are not the owner of this block."), true);
                 return;
@@ -106,9 +106,9 @@ public class BJMachineBlock extends BaseEntityBlock {
     public void onRemove(BlockState pState, Level pLevel, BlockPos pPos, BlockState pNewState, boolean pIsMoving) {
         if (pState.getBlock() != pNewState.getBlock()) {
             BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
-            if (blockEntity instanceof SlotMachineBlockEntity) {
-                ((SlotMachineBlockEntity) blockEntity).drops();
-                ((SlotMachineBlockEntity) blockEntity).dropOwnerItems();
+            if (blockEntity instanceof BJMachineBlockEntity) {
+                ((BJMachineBlockEntity) blockEntity).drops();
+                ((BJMachineBlockEntity) blockEntity).dropOwnerItems();
             }
         }
         super.onRemove(pState, pLevel, pPos, pNewState, pIsMoving);
@@ -118,14 +118,16 @@ public class BJMachineBlock extends BaseEntityBlock {
     public InteractionResult use(BlockState pState, Level pLevel, BlockPos pPos, Player pPlayer, InteractionHand pHand, BlockHitResult pHit) {
         if (!pLevel.isClientSide()) {
             BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
-            if (blockEntity instanceof SlotMachineBlockEntity slotMachineBlockEntity) {
-                if (pPlayer.isCrouching() && slotMachineBlockEntity.getOwner().equals(pPlayer.getUUID())) {
-                    // Open the owner menu if the player is the owner and is sneaking
-                    NetworkHooks.openScreen((ServerPlayer) pPlayer, new SlotMachineOwnerMenuProvider(slotMachineBlockEntity), pPos);
-                } else {
-                    // Open the regular menu otherwise
-                    NetworkHooks.openScreen((ServerPlayer) pPlayer, slotMachineBlockEntity, pPos);
-                }
+            if (blockEntity instanceof BJMachineBlockEntity bjMachineBlockEntity) {
+                NetworkHooks.openScreen((ServerPlayer) pPlayer, bjMachineBlockEntity, pPos);
+
+//                if (pPlayer.isCrouching() && bjMachineBlockEntity.getOwner().equals(pPlayer.getUUID())) {
+//                    // Open the owner menu if the player is the owner and is sneaking
+//                    NetworkHooks.openScreen((ServerPlayer) pPlayer, new BJMachineOwnerMenuProvider(bjMachineBlockEntity), pPos);
+//                } else {
+//                    // Open the regular menu otherwise
+//                    NetworkHooks.openScreen((ServerPlayer) pPlayer, bjMachineBlockEntity, pPos);
+//                }
             } else {
                 throw new IllegalStateException("Container provider went yeet?");
             }
@@ -141,7 +143,7 @@ public class BJMachineBlock extends BaseEntityBlock {
             return null;
         }
 
-        return createTickerHelper(pBlockEntityType, ModBlockEntities.SLOT_MACHINE_BE.get(),
+        return createTickerHelper(pBlockEntityType, ModBlockEntities.BJ_MACHINE_BE.get(),
                 (level, blockPos, blockState, pBlockEntity) -> pBlockEntity.tick(level, blockPos, blockState, pBlockEntity));
     }
 }
