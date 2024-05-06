@@ -345,25 +345,13 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
             } while (slot1 == slot2 || slot2 == slot3 || slot1 == slot3);
         }
 
-        // Rigged System when we don't have any profits in the slots machine yet!
-        Map<Item, Integer> itemCounts = new HashMap<>();
-        for (int i = 0; i < ownerItemHandler.getSlots(); i++) {
-            ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
-            itemCounts.put(stackInSlot.getItem(), itemCounts.getOrDefault(stackInSlot.getItem(), 0) + stackInSlot.getCount());
-        }
 
-        for (Map.Entry<Item, Integer> entry : itemCounts.entrySet()) {
-            if (entry.getKey() == BET_ITEM.getItem() && entry.getValue() < Config.triplePayoutAmount) {
-                slot1 = (int) (Math.random() * 5 + 1);
-                do {
-                    slot2 = (int) (Math.random() * 5 + 1);
-                } while (slot2 == slot1);
-                do {
-                    slot3 = (int) (Math.random() * 5 + 1);
-                } while (slot3 == slot1 || slot3 == slot2);
-                break;
-            }
-        }
+        // set slot1, slot2, slot3
+
+        int[] slots = checkBetItemAndPayout(slot1, slot2, slot3);
+        slot1 = slots[0];
+        slot2 = slots[1];
+        slot3 = slots[2];
 
         // Call payout directly when the spin stops
         payout(slot1, slot2, slot3);
@@ -371,6 +359,28 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         setChanged();
 
         return new int[]{slot1, slot2, slot3};
+    }
+
+    public int[] checkBetItemAndPayout(int slot1, int slot2, int slot3) {
+        Map<Item, Integer> itemCounts = new HashMap<>();
+        for (int i = 0; i < ownerItemHandler.getSlots(); i++) {
+            ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
+            itemCounts.put(stackInSlot.getItem(), itemCounts.getOrDefault(stackInSlot.getItem(), 0) + stackInSlot.getCount());
+        }
+
+        if (itemCounts.containsKey(BET_ITEM.getItem()) && itemCounts.get(BET_ITEM.getItem()) >= Config.triplePayoutAmount) {
+            return new int[]{slot1, slot2, slot3};
+        } else {
+            int[] result = new int[3];
+            result[0] = (int) (Math.random() * 5 + 1);
+            do {
+                result[1] = (int) (Math.random() * 5 + 1);
+            } while (result[1] == result[0]);
+            do {
+                result[2] = (int) (Math.random() * 5 + 1);
+            } while (result[2] == result[0] || result[2] == result[1]);
+            return result;
+        }
     }
 
 
