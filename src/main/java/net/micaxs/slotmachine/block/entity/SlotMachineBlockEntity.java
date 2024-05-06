@@ -345,9 +345,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
             } while (slot1 == slot2 || slot2 == slot3 || slot1 == slot3);
         }
 
-
-        // set slot1, slot2, slot3
-
+        // Casually just cheezing a loss if we don't have enough to payout the player!
         int[] slots = checkBetItemAndPayout(slot1, slot2, slot3);
         slot1 = slots[0];
         slot2 = slots[1];
