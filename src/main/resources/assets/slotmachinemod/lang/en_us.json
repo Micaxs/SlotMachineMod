@@ -3,5 +3,7 @@
   "slots.gui.stop": "Stop",
   "slots.gui.spin": "Spin!",
 
-  "block.slotmachinemod.bj_machine": "Blackjack Machine"
+  "block.slotmachinemod.bj_machine": "Blackjack Machine",
+  "bj.gui.add_credits": "↑",
+  "bj.gui.retrieve_credits": "↓"
 }

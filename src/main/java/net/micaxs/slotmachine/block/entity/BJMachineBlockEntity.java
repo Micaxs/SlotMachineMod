@@ -2,6 +2,7 @@ package net.micaxs.slotmachine.block.entity;
 
 import net.micaxs.slotmachine.Config;
 import net.micaxs.slotmachine.screen.BJMachineMenu;
+import net.micaxs.slotmachine.utils.DeckHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -86,15 +87,20 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
     protected final ContainerData data;
 
     private int playing = 0;
+    private int credits = 0;
+    private DeckHandler cardDeck = new DeckHandler();
+
     private UUID ownerUUID;
 
     public BJMachineBlockEntity(BlockPos pPos, BlockState pBlockState) {
         super(ModBlockEntities.BJ_MACHINE_BE.get(), pPos, pBlockState);
+
         this.data = new ContainerData() {
             @Override
             public int get(int pIndex) {
                 return switch (pIndex) {
                     case 0 -> BJMachineBlockEntity.this.playing;
+                    case 1 -> BJMachineBlockEntity.this.credits;
                     default -> 0;
                 };
             }
@@ -103,6 +109,7 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
             public void set(int pIndex, int pValue) {
                 switch (pIndex) {
                     case 0 -> BJMachineBlockEntity.this.playing = pValue;
+                    case 1 -> BJMachineBlockEntity.this.credits = pValue;
                 }
             }
 
@@ -111,6 +118,7 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
                 return 2;
             }
         };
+
     }
 
     public void setOwner(UUID ownerUUID) {
@@ -248,6 +256,7 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
         }
         return true;
     }
+
 
     private void payout(int slot1, int slot2, int slot3) {
         // TODO: Do payout logic for BJ machine...
@@ -401,5 +410,33 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
 
     public Object getOwner() {
         return ownerUUID;
+    }
+
+
+    public int getCredits() {
+        return credits;
+    }
+
+    public void addCredits(int amount) {
+        if (credits < 64) {
+            credits += amount;
+            itemHandler.getStackInSlot(0).shrink(amount);
+        }
+    }
+
+    public void removeCredits() {
+        if (credits > 0) {
+            // check if output slot contains an item if it does add the credits to it
+            if (itemHandler.getStackInSlot(OUTPUT_SLOT).isEmpty()) {
+                itemHandler.setStackInSlot(OUTPUT_SLOT, new ItemStack(Items.DIAMOND, credits));
+            } else {
+                itemHandler.getStackInSlot(OUTPUT_SLOT).grow(credits);
+            }
+            credits = 0;
+        }
+    }
+
+    public IItemHandler getInventory() {
+        return lazyItemHandler.orElseThrow(() -> new RuntimeException("Inventory not present"));
     }
 }

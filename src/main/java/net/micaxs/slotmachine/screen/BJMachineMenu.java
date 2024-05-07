@@ -3,10 +3,12 @@ package net.micaxs.slotmachine.screen;
 import net.micaxs.slotmachine.block.ModBlocks;
 import net.micaxs.slotmachine.block.entity.BJMachineBlockEntity;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -27,6 +29,7 @@ public class BJMachineMenu extends AbstractContainerMenu {
     public BJMachineMenu(int pContainerId, Inventory inv, BlockEntity entity, ContainerData data) {
         super(ModMenuTypes.BJ_MACHINE_MENU.get(), pContainerId);
         checkContainerSize(inv, 2);
+
         blockEntity = ((BJMachineBlockEntity) entity);
         this.level = inv.player.level();
         this.data = data;
@@ -35,8 +38,8 @@ public class BJMachineMenu extends AbstractContainerMenu {
         addPlayerHotbar(inv);
 
         blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(iItemHandler -> {
-            this.addSlot(new SlotItemHandler(iItemHandler, 0, 22, 34));
-            this.addSlot(new SlotItemHandler(iItemHandler, 1, 135, 34));
+            this.addSlot(new SlotItemHandler(iItemHandler, 0, 9, 9));
+            this.addSlot(new SlotItemHandler(iItemHandler, 1, 151, 9));
         });
 
 
@@ -111,6 +114,20 @@ public class BJMachineMenu extends AbstractContainerMenu {
         for (int i = 0; i < 9; ++i) {
             this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 142));
         }
+    }
+
+    public void addCredits() {
+        if (blockEntity.getCredits() < 64) {
+            // Check if the item in the input slot is a valid bet item
+            if (blockEntity.getInventory().getStackInSlot(0).getItem() == Items.DIAMOND) { // Replace Items.DIAMOND with your valid bet item
+                // Increase the credits
+                blockEntity.addCredits(1);
+            }
+        }
+    }
+
+    public void removeCredits() {
+        blockEntity.removeCredits();
     }
 
 //    public int[] stopSpin() {

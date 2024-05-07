@@ -14,21 +14,21 @@ import java.util.function.Supplier;
 public class BJC2SPacket {
 
     private final BlockPos pos;
-    private final boolean spinState; // true for start, false for stop
+    private final boolean buttonState; // true for start, false for stop
 
-    public BJC2SPacket(BlockPos pos, boolean spinState) {
+    public BJC2SPacket(BlockPos pos, boolean buttonState) {
         this.pos = pos;
-        this.spinState = spinState;
+        this.buttonState = buttonState;
     }
 
     public BJC2SPacket(FriendlyByteBuf buffer) {
         this.pos = buffer.readBlockPos();
-        this.spinState = buffer.readBoolean();
+        this.buttonState = buffer.readBoolean();
     }
 
     public void toBytes(FriendlyByteBuf buffer) {
         buffer.writeBlockPos(pos);
-        buffer.writeBoolean(spinState);
+        buffer.writeBoolean(buttonState);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> supplier) {
@@ -38,13 +38,13 @@ public class BJC2SPacket {
 //            ServerLevel level = player.serverLevel();
 //            BlockEntity be = level.getBlockEntity(pos);
 //            if (be instanceof BJMachineBlockEntity) {
-//                int[] results;
-//                if (spinState) {
-//                    results = ((BJMachineBlockEntity) be).startSpin();
+//                int results;
+//                if (buttonState) {
+//                    results = ((BJMachineBlockEntity) be).addCredits();
 //                } else {
-//                    results = ((BJMachineBlockEntity) be).stopSpin();
+//                    results = ((BJMachineBlockEntity) be).removeCredits();
 //                }
-//                PacketHandler.sendToPlayer(new SlotsS2CPacket(pos, results), player);
+//                PacketHandler.sendToPlayer(new BJS2CPacket(pos, results), player);
 //            }
 //        });
         return true;

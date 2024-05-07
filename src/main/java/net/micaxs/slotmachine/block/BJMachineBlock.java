@@ -121,6 +121,8 @@ public class BJMachineBlock extends BaseEntityBlock {
             if (blockEntity instanceof BJMachineBlockEntity bjMachineBlockEntity) {
                 NetworkHooks.openScreen((ServerPlayer) pPlayer, bjMachineBlockEntity, pPos);
 
+// TODO: Implement the owner menu
+
 //                if (pPlayer.isCrouching() && bjMachineBlockEntity.getOwner().equals(pPlayer.getUUID())) {
 //                    // Open the owner menu if the player is the owner and is sneaking
 //                    NetworkHooks.openScreen((ServerPlayer) pPlayer, new BJMachineOwnerMenuProvider(bjMachineBlockEntity), pPos);
