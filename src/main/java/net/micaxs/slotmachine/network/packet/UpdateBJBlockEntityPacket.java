@@ -9,37 +9,34 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class AddCreditsPacket {
+public class UpdateBJBlockEntityPacket {
     private final BlockPos pos;
-    private final int credits;
-    private boolean insert;
+    private final int value;
 
-    public AddCreditsPacket(BlockPos pos, int credits, boolean insert) {
+    public UpdateBJBlockEntityPacket(BlockPos pos, int value) {
         this.pos = pos;
-        this.credits = credits;
-        this.insert = insert;
+        this.value = value;
     }
 
-    public static void encode(AddCreditsPacket packet, FriendlyByteBuf buffer) {
+    public static void encode(UpdateBJBlockEntityPacket packet, FriendlyByteBuf buffer) {
         buffer.writeBlockPos(packet.pos);
-        buffer.writeInt(packet.credits);
-        buffer.writeBoolean(packet.insert);
+        buffer.writeInt(packet.value);
     }
 
-    public static AddCreditsPacket decode(FriendlyByteBuf buffer) {
+    public static UpdateBJBlockEntityPacket decode(FriendlyByteBuf buffer) {
         BlockPos pos = buffer.readBlockPos();
-        int credits = buffer.readInt();
-        boolean insert = buffer.readBoolean();
-        return new AddCreditsPacket(pos, credits, insert);
+        int value = buffer.readInt();
+        return new UpdateBJBlockEntityPacket(pos, value);
     }
 
-    public static void handle(AddCreditsPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
+    public static void handle(UpdateBJBlockEntityPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
             ServerLevel serverLevel = (ServerLevel) context.getSender().level();
             BlockEntity blockEntity = serverLevel.getBlockEntity(packet.pos);
             if (blockEntity instanceof BJMachineBlockEntity) {
-                ((BJMachineBlockEntity) blockEntity).addCredits(packet.credits, packet.insert);
+                BJMachineBlockEntity bjBlockEntity = (BJMachineBlockEntity) blockEntity;
+                bjBlockEntity.checkStatus(packet.value);
             }
         });
         context.setPacketHandled(true);

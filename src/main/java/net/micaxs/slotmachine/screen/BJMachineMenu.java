@@ -121,14 +121,36 @@ public class BJMachineMenu extends AbstractContainerMenu {
             // Check if the item in the input slot is a valid bet item
             if (blockEntity.getInventory().getStackInSlot(0).getItem() == Items.DIAMOND) { // Replace Items.DIAMOND with your valid bet item
                 // Increase the credits
-                blockEntity.addCredits(1);
+                blockEntity.addCredits(1, true);
             }
         }
     }
 
     public void removeCredits() {
-        blockEntity.removeCredits();
+        blockEntity.removeCredits(true);
     }
+
+    public void dealNewHand() {
+        blockEntity.dealNewHand();
+        blockEntity.removeCredits(false);
+    }
+
+    public String[] getPlayerCards() {
+        return blockEntity.playerCards;
+    }
+
+    public String[] getDealerCards() {
+        return blockEntity.dealerCards;
+    }
+
+    public void hit() {
+        blockEntity.hit();
+    }
+
+    public void stand() {
+        blockEntity.stand();
+    }
+
 
 //    public int[] stopSpin() {
 //        this.data.set(0, 1);

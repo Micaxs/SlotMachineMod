@@ -5,5 +5,8 @@
 
   "block.slotmachinemod.bj_machine": "Blackjack Machine",
   "bj.gui.add_credits": "↑",
-  "bj.gui.retrieve_credits": "↓"
+  "bj.gui.retrieve_credits": "↓",
+  "bj.gui.deal": "New Hand",
+  "bj.gui.hit": "Hit",
+  "bj.gui.stand": "Stand"
 }

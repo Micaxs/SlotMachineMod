@@ -88,7 +88,11 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
 
     private int playing = 0;
     private int credits = 0;
-    private DeckHandler cardDeck = new DeckHandler();
+    private final DeckHandler cardDeck = new DeckHandler();
+
+    public int dealerHand = 0;
+    public int playerHand = 0;
+
 
     private UUID ownerUUID;
 
@@ -258,44 +262,10 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
     }
 
 
-    private void payout(int slot1, int slot2, int slot3) {
-        // TODO: Do payout logic for BJ machine...
-        addToOwnerInventory();
-
-        // 3 the same -> x2
-        if (slot1 == slot2 && slot2 == slot3) {
-            // Remove 3 from the ownerItemHandler
-            removeFromOwnerInventory(Config.triplePayoutAmount);
-
-            ItemStack betItem = BET_ITEM;
-            betItem.setCount(Config.triplePayoutAmount);
-
-            ItemStack outputSlotItem = this.itemHandler.getStackInSlot(OUTPUT_SLOT);
-            if (outputSlotItem.isEmpty()) {
-                this.itemHandler.setStackInSlot(OUTPUT_SLOT, betItem);
-            } else if (outputSlotItem.getItem() == betItem.getItem()) {
-                outputSlotItem.setCount(outputSlotItem.getCount() + Config.triplePayoutAmount);
-                this.itemHandler.setStackInSlot(OUTPUT_SLOT, outputSlotItem);
-            } else {
-                // You screwed as you dun fucked up somehow.
-            }
-        } else if (slot1 == slot2 || slot2 == slot3 || slot1 == slot3) {
-            removeFromOwnerInventory(Config.doublePayoutAmount);
-
-            ItemStack betItem = BET_ITEM;
-            betItem.setCount(Config.doublePayoutAmount);
-
-            ItemStack outputSlotItem = this.itemHandler.getStackInSlot(OUTPUT_SLOT);
-            if (outputSlotItem.isEmpty()) {
-                this.itemHandler.setStackInSlot(OUTPUT_SLOT, betItem);
-            } else if (outputSlotItem.getItem() == betItem.getItem()) {
-                outputSlotItem.setCount(outputSlotItem.getCount() + Config.doublePayoutAmount);
-                this.itemHandler.setStackInSlot(OUTPUT_SLOT, outputSlotItem);
-            } else {
-                // You screwed as you dun fucked up somehow.
-            }
-        }
-        setChanged();
+    public void payout(int winnings) {
+        System.out.println("Payout");
+        System.out.println("Winnings: " + winnings);
+        credits += winnings;
     }
 
 
@@ -330,101 +300,32 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
         }
     }
 
-//    public int[] stopSpin() {
-//        double twoSameProbability = Config.doubleWinChance;
-//        double threeSameProbability = Config.tripleWinChance;
-//
-//        double random = Math.random();
-//
-//        if (random < threeSameProbability) {
-//            slot1 = slot2 = slot3 = (int) (Math.random() * 5 + 1);
-//        } else if (random < twoSameProbability + threeSameProbability) {
-//            slot1 = slot2 = (int) (Math.random() * 5 + 1);
-//            do {
-//                slot3 = (int) (Math.random() * 5 + 1);
-//            } while ((slot3 == slot1 || slot3 == slot2) && (slot1 != slot2));
-//        } else {
-//            do {
-//                slot1 = (int) (Math.random() * 5 + 1);
-//                slot2 = (int) (Math.random() * 5 + 1);
-//                slot3 = (int) (Math.random() * 5 + 1);
-//            } while (slot1 == slot2 || slot2 == slot3 || slot1 == slot3);
-//        }
-//
-//        // Casually just cheezing a loss if we don't have enough to payout the player!
-//        int[] slots = checkBetItemAndPayout(slot1, slot2, slot3);
-//        slot1 = slots[0];
-//        slot2 = slots[1];
-//        slot3 = slots[2];
-//
-//        // Call payout directly when the spin stops
-//        payout(slot1, slot2, slot3);
-//
-//        setChanged();
-//
-//        return new int[]{slot1, slot2, slot3};
-//    }
-//
-//    public int[] checkBetItemAndPayout(int slot1, int slot2, int slot3) {
-//        Map<Item, Integer> itemCounts = new HashMap<>();
-//        for (int i = 0; i < ownerItemHandler.getSlots(); i++) {
-//            ItemStack stackInSlot = ownerItemHandler.getStackInSlot(i);
-//            itemCounts.put(stackInSlot.getItem(), itemCounts.getOrDefault(stackInSlot.getItem(), 0) + stackInSlot.getCount());
-//        }
-//
-//        if (itemCounts.containsKey(BET_ITEM.getItem()) && itemCounts.get(BET_ITEM.getItem()) >= Config.triplePayoutAmount) {
-//            return new int[]{slot1, slot2, slot3};
-//        } else {
-//            int[] result = new int[3];
-//            result[0] = (int) (Math.random() * 5 + 1);
-//            do {
-//                result[1] = (int) (Math.random() * 5 + 1);
-//            } while (result[1] == result[0]);
-//            do {
-//                result[2] = (int) (Math.random() * 5 + 1);
-//            } while (result[2] == result[0] || result[2] == result[1]);
-//            return result;
-//        }
-//    }
-
-
-//    public int[] startSpin() {
-//        BET_ITEM = this.itemHandler.getStackInSlot(INPUT_SLOT);
-//        ItemStack itemInOutputSlot = this.itemHandler.getStackInSlot(OUTPUT_SLOT);
-//
-//        // Fixes the ability to start spinning and take out the betItem to cheeze the machine.
-//        this.itemHandler.extractItem(INPUT_SLOT, 1, false);
-//
-//        if (Config.validBetItems.contains(BET_ITEM.getItem())) {
-//            if (itemInOutputSlot.isEmpty() || itemInOutputSlot.getItem() == BET_ITEM.getItem() && itemInOutputSlot.getCount() + Config.triplePayoutAmount < itemInOutputSlot.getMaxStackSize()) {
-//                // We good to go...
-//                return new int[]{0, 0, 0};
-//            } else {
-//                return new int[]{6, 6, 6};
-//            }
-//        } else {
-//            return new int[]{6, 6, 6};
-//        }
-//
-//    }
-
     public Object getOwner() {
         return ownerUUID;
     }
-
 
     public int getCredits() {
         return credits;
     }
 
-    public void addCredits(int amount) {
-        if (credits < 64) {
+    public void addCredits(int amount, boolean inserting) {
+        if (inserting) {
+            if (credits < 32) {
+                if (!itemHandler.getStackInSlot(0).isEmpty() && itemHandler.getStackInSlot(0).getItem() == Items.DIAMOND) {
+                    credits += amount;
+                    itemHandler.getStackInSlot(0).shrink(amount);
+                }
+            }
+        } else {
             credits += amount;
-            itemHandler.getStackInSlot(0).shrink(amount);
         }
     }
 
-    public void removeCredits() {
+    public void deductCredits(int amount) {
+        credits -= amount;
+    }
+
+    public void removeCredits(boolean all) {
         if (credits > 0) {
             // check if output slot contains an item if it does add the credits to it
             if (itemHandler.getStackInSlot(OUTPUT_SLOT).isEmpty()) {
@@ -436,7 +337,175 @@ public class BJMachineBlockEntity extends BlockEntity implements MenuProvider {
         }
     }
 
+    public boolean isPlaying() {
+        return playing == 1;
+    }
+
+    public String[] dealerCards = new String[7];
+    public String[] playerCards = new String[7];
+
+    private DeckHandler deck;
+    public boolean playerBusted = false;
+    public boolean dealerBusted = false;
+    public boolean dealerWins = false;
+    public boolean playerWins = false;
+    public boolean isDraw = false;
+    public boolean playerBlackjack = false;
+
+    public void resetGame() {
+        playing = 0;
+        dealerHand = 0;
+        playerHand = 0;
+        playerCards = new String[7];
+        dealerCards = new String[7];
+        playerBusted = false;
+        dealerBusted = false;
+        dealerWins = false;
+        playerWins = false;
+        isDraw = false;
+        playerBlackjack = false;
+    }
+
+    public void dealNewHand() {
+        // Reset Game.
+        resetGame();
+        playing = 1;
+
+        deck = new DeckHandler();
+        deck.createDeck();
+        deck.shuffleDeck();
+
+        String dealerCard1 = deck.drawCard();
+        String playerCard1 = deck.drawCard();
+        String playerCard2 = deck.drawCard();
+
+        System.out.println("Dealer card: " + dealerCard1);
+        System.out.println("Player card 1: " + playerCard1);
+        System.out.println("Player card 2: " + playerCard2);
+
+        dealerCards[0] = dealerCard1;
+        playerCards[0] = playerCard1;
+        playerCards[1] = playerCard2;
+
+        dealerHand = deck.getHandValue(dealerCards);
+        playerHand = deck.getHandValue(playerCards);
+
+        if (playerHand == 21) {
+            // Player wins
+            dealerWins = false;
+            playerBlackjack = true;
+            playing = 0;
+        }
+    }
+
+
     public IItemHandler getInventory() {
         return lazyItemHandler.orElseThrow(() -> new RuntimeException("Inventory not present"));
+    }
+
+    public void finishDealerCards() {
+        while (dealerHand < 17) {
+            String dealerCard = deck.drawCard();
+            // Find the next available index in dealerCards
+            int nextIndex = 0;
+            for (int i = 0; i < dealerCards.length; i++) {
+                if (dealerCards[i] == null || dealerCards[i].isEmpty()) {
+                    nextIndex = i;
+                    break;
+                }
+            }
+            // Add the new card at the next available index
+            dealerCards[nextIndex] = dealerCard;
+
+            dealerHand = deck.getHandValue(dealerCards);
+
+            if (dealerHand > 21) {
+                dealerBusted = true;
+                playing = 0;
+            }
+        }
+    }
+
+    public void hit() {
+        if (playing == 1) {
+            String playerCard = deck.drawCard();
+            // Find the next available index in playerCards
+            int nextIndex = 0;
+            for (int i = 0; i < playerCards.length; i++) {
+                if (playerCards[i] == null || playerCards[i].isEmpty()) {
+                    nextIndex = i;
+                    break;
+                }
+            }
+            // Add the new card at the next available index
+            playerCards[nextIndex] = playerCard;
+
+            playerHand = deck.getHandValue(playerCards);
+
+            if (playerHand == 21) {
+                // Player wins
+                dealerWins = false;
+                playerBlackjack = true;
+                playing = 0;
+            }
+
+            if (playerHand > 21) {
+                playerBusted = true;
+                displayNextDealerCard();
+                playing = 0;
+            }
+        }
+    }
+
+    private void displayNextDealerCard() {
+        String dealerCard = deck.drawCard();
+        // Find the next available index in dealerCards
+        int nextIndex = 0;
+        for (int i = 0; i < dealerCards.length; i++) {
+            if (dealerCards[i] == null || dealerCards[i].isEmpty()) {
+                nextIndex = i;
+                break;
+            }
+        }
+        // Add the new card at the next available index
+        dealerCards[nextIndex] = dealerCard;
+        dealerHand = deck.getHandValue(dealerCards);
+    }
+
+    public void stand() {
+        // Do stand logic stuff
+        finishDealerCards();
+        if (!dealerBusted) {
+            if (dealerHand > playerHand) {
+                // Dealer wins
+                dealerWins = true;
+                playerWins = false;
+            } else if (dealerHand < playerHand) {
+                // Player wins
+                dealerWins = false;
+                playerWins = true;
+            } else {
+                // Draw
+                dealerWins = false;
+                playerWins = false;
+                isDraw = true;
+            }
+        }
+
+        playing = 0;
+    }
+
+    public void checkStatus(int value) {
+        if (!isPlaying()) {
+            if (value == 0) {
+                this.payout(0);
+            } else if (value == 1) {
+                this.payout(2);
+            } else if (value == 2) {
+                this.payout(1);
+            } else if (value == 3) {
+                this.payout(3);
+            }
+        }
     }
 }

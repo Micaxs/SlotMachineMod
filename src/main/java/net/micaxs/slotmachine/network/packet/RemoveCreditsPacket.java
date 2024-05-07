@@ -31,7 +31,7 @@ public class RemoveCreditsPacket {
             ServerLevel serverLevel = (ServerLevel) context.getSender().level();
             BlockEntity blockEntity = serverLevel.getBlockEntity(packet.pos);
             if (blockEntity instanceof BJMachineBlockEntity) {
-                ((BJMachineBlockEntity) blockEntity).removeCredits();
+                ((BJMachineBlockEntity) blockEntity).removeCredits(true);
             }
         });
         context.setPacketHandled(true);

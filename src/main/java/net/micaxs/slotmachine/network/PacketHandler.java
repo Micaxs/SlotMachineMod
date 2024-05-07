@@ -35,7 +35,7 @@ public class PacketHandler {
 
         net.messageBuilder(AddCreditsPacket.class, id(), NetworkDirection.PLAY_TO_SERVER).decoder(AddCreditsPacket::decode).encoder(AddCreditsPacket::encode).consumerMainThread(AddCreditsPacket::handle).add();
         net.messageBuilder(RemoveCreditsPacket.class, id(), NetworkDirection.PLAY_TO_SERVER).decoder(RemoveCreditsPacket::decode).encoder(RemoveCreditsPacket::encode).consumerMainThread(RemoveCreditsPacket::handle).add();
-
+        net.messageBuilder(DeductCreditsPacket.class, id(), NetworkDirection.PLAY_TO_SERVER).decoder(DeductCreditsPacket::decode).encoder(DeductCreditsPacket::encode).consumerMainThread(DeductCreditsPacket::handle).add();
 
     }
 

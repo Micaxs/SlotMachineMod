@@ -9,37 +9,33 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class AddCreditsPacket {
+public class DeductCreditsPacket {
     private final BlockPos pos;
-    private final int credits;
-    private boolean insert;
+    private final int amount;
 
-    public AddCreditsPacket(BlockPos pos, int credits, boolean insert) {
+    public DeductCreditsPacket(BlockPos pos, int amount) {
         this.pos = pos;
-        this.credits = credits;
-        this.insert = insert;
+        this.amount = amount;
     }
 
-    public static void encode(AddCreditsPacket packet, FriendlyByteBuf buffer) {
+    public static void encode(DeductCreditsPacket packet, FriendlyByteBuf buffer) {
         buffer.writeBlockPos(packet.pos);
-        buffer.writeInt(packet.credits);
-        buffer.writeBoolean(packet.insert);
+        buffer.writeInt(packet.amount);
     }
 
-    public static AddCreditsPacket decode(FriendlyByteBuf buffer) {
+    public static DeductCreditsPacket decode(FriendlyByteBuf buffer) {
         BlockPos pos = buffer.readBlockPos();
-        int credits = buffer.readInt();
-        boolean insert = buffer.readBoolean();
-        return new AddCreditsPacket(pos, credits, insert);
+        int amount = buffer.readInt();
+        return new DeductCreditsPacket(pos, amount);
     }
 
-    public static void handle(AddCreditsPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
+    public static void handle(DeductCreditsPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
             ServerLevel serverLevel = (ServerLevel) context.getSender().level();
             BlockEntity blockEntity = serverLevel.getBlockEntity(packet.pos);
             if (blockEntity instanceof BJMachineBlockEntity) {
-                ((BJMachineBlockEntity) blockEntity).addCredits(packet.credits, packet.insert);
+                ((BJMachineBlockEntity) blockEntity).deductCredits(packet.amount);
             }
         });
         context.setPacketHandled(true);
