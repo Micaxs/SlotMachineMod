@@ -19,7 +19,7 @@ public class ModBlocks {
 
 
     public static final RegistryObject<Block> SLOT_MACHINE = registerBlock("slot_machine",
-            () -> new SlotMachineBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+            () -> new SlotMachineBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).strength(-1.0F, 3600000.8F).noOcclusion()));
 
 
     private static <T extends Block>RegistryObject<T> registerBlock(String name, Supplier<T> block) {
