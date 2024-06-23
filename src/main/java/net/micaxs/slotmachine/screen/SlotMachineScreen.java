@@ -20,6 +20,9 @@ import java.util.Random;
 
 public class SlotMachineScreen extends AbstractContainerScreen<SlotMachineMenu> {
 
+    private long lastClickTime = 0;
+    private static final long COOLDOWN = 1000;
+
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_machine_gui.png");
 
@@ -53,11 +56,15 @@ public class SlotMachineScreen extends AbstractContainerScreen<SlotMachineMenu> 
             this.message = "";
         }
 
-
         if (!outOfService) {
             this.spinButton = new Button.Builder(Component.translatable("slots.gui.spin"), pButton -> {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastClickTime < COOLDOWN) {
+                    return;
+                }
+                lastClickTime = currentTime;
                 PacketHandler.sendToServer(new SlotsC2SPacket(SlotMachineMenu.blockEntity.getBlockPos(), true));
-                results = new int[]{0, 0, 0}; // Add this line
+                results = new int[]{0, 0, 0};
             }).pos(x + 64, y + 68).size(44, 11).build();
 
             this.stopButton = new Button.Builder(Component.translatable("slots.gui.stop"), pButton -> {
