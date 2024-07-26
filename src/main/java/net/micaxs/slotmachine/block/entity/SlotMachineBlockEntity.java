@@ -124,6 +124,13 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         return ownerUUID;
     }
 
+    public void dropSlotsMachine(Player player, BlockPos pos) {
+        drops();
+        dropOwnerItems();
+        level.addFreshEntity(new ItemEntity(level, player.position().x, player.position().y, player.position().z, new ItemStack(player.level().getBlockState(pos).getBlock().asItem()).copy()));
+        player.level().removeBlock(pos, true);
+    }
+
     public void drops() {
         SimpleContainer inventory = new SimpleContainer(itemHandler.getSlots());
         for (int i = 0; i < itemHandler.getSlots(); i++) {

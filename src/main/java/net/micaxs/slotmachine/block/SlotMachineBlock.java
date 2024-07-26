@@ -33,8 +33,6 @@ public class SlotMachineBlock extends BaseEntityBlock {
     public static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 29, 16);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
-
-
     public SlotMachineBlock(Properties pProperties) {
         super(pProperties);
         registerDefaultState(defaultBlockState().setValue(FACING, Direction.WEST));
@@ -90,31 +88,6 @@ public class SlotMachineBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level pLevel, BlockPos pPos, BlockState pState, Player pPlayer) {
-        BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
-        if (blockEntity instanceof SlotMachineBlockEntity slotMachineBlockEntity) {
-            if (!slotMachineBlockEntity.getOwner().equals(pPlayer.getUUID())) {
-                pLevel.setBlock(pPos, pState, 3);
-                pPlayer.displayClientMessage(Component.literal("You are not the owner of this block."), true);
-                return;
-            }
-        }
-        super.playerWillDestroy(pLevel, pPos, pState, pPlayer);
-    }
-
-    @Override
-    public void onRemove(BlockState pState, Level pLevel, BlockPos pPos, BlockState pNewState, boolean pIsMoving) {
-        if (pState.getBlock() != pNewState.getBlock()) {
-            BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
-            if (blockEntity instanceof SlotMachineBlockEntity) {
-                ((SlotMachineBlockEntity) blockEntity).drops();
-                ((SlotMachineBlockEntity) blockEntity).dropOwnerItems();
-            }
-        }
-        super.onRemove(pState, pLevel, pPos, pNewState, pIsMoving);
-    }
-
-    @Override
     public InteractionResult use(BlockState pState, Level pLevel, BlockPos pPos, Player pPlayer, InteractionHand pHand, BlockHitResult pHit) {
         if (!pLevel.isClientSide()) {
             BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
@@ -132,6 +105,21 @@ public class SlotMachineBlock extends BaseEntityBlock {
         }
 
         return InteractionResult.sidedSuccess(pLevel.isClientSide());
+    }
+
+    @Override
+    public void attack(BlockState state, Level world, BlockPos pos, Player player) {
+        if (world.isClientSide)
+            return;
+        BlockEntity _te = world.getBlockEntity(pos);
+        if (!(_te instanceof SlotMachineBlockEntity))
+            return;
+        SlotMachineBlockEntity te = (SlotMachineBlockEntity) _te;
+        if (te.getOwner().equals(player.getUUID())) {
+            if (player.isShiftKeyDown()) {
+                te.dropSlotsMachine(player, pos);
+            }
+        }
     }
 
     @Nullable
