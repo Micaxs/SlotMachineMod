@@ -13,7 +13,7 @@
   "slots.gui.prizes": "Prizes",
   "slots.admin.title": "Slot Machine Admin",
   "slots.admin.bet_item": "Bet Item",
-  "slots.admin.bet_hint": "Place any item to set the bet",
+  "slots.admin.bet_hint": "Set item as currency.",
   "slots.admin.prize_table": "Prize Table",
   "slots.admin.prize_label": "Prize %s",
   "slots.admin.inventory": "Inventory",

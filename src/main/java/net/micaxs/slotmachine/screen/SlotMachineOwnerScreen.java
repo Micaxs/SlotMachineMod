@@ -35,7 +35,7 @@ public class SlotMachineOwnerScreen extends AbstractContainerScreen<SlotMachineO
     // Adjust each pair to line up with your texture's label areas.
     private static final int TEXT_BET_LABEL_X    = 32;  private static final int TEXT_BET_LABEL_Y    = 15;
     private static final int TEXT_BET_VALUE_X    = 32;  private static final int TEXT_BET_VALUE_Y    = 24;
-    private static final int TEXT_PRIZE_HDR_X    = 105;   private static final int TEXT_PRIZE_HDR_Y    = 32;
+    private static final int TEXT_PRIZE_HDR_X    = 105;   private static final int TEXT_PRIZE_HDR_Y    = 34;
     private static final int TEXT_PRIZE_NAME_X   = 32;
     private static final int TEXT_PRIZE_ROW_Y    = 42;  // rowTopY = TEXT_PRIZE_ROW_Y + i * PRIZE_SLOT_STEP
     private static final int TEXT_PRIZE_CHANCE_X = 130; // chance % right-aligned to this x
@@ -43,15 +43,15 @@ public class SlotMachineOwnerScreen extends AbstractContainerScreen<SlotMachineO
 
     // ── button positions (relative to panel top-left) ───────────────────────
     // ± buttons per prize row (size 14 × 12)
-    private static final int BTN_DEC_X    = 132;
-    private static final int BTN_INC_X    = 148;
+    private static final int BTN_DEC_X    = 134;
+    private static final int BTN_INC_X    = 150;
     private static final int BTN_OFFSET_Y = 2;   // added to rowTopY
     private static final int BTN_PM_W     = 14;
     private static final int BTN_PM_H     = 12;
     // Navigation buttons at bottom of prize table (size 76 × 14)
-    private static final int BTN_NAV_Y        = 141;
-    private static final int BTN_STOCK_X      = 8;   private static final int BTN_STOCK_W      = 76;
-    private static final int BTN_BET_STORE_X  = 92;  private static final int BTN_BET_STORE_W  = 76;
+    private static final int BTN_NAV_Y        = 144;
+    private static final int BTN_STOCK_X      = 11;   private static final int BTN_STOCK_W      = 76;
+    private static final int BTN_BET_STORE_X  = 89;  private static final int BTN_BET_STORE_W  = 76;
     private static final int BTN_NAV_H        = 14;
 
     // ── colours (shared with sub-screens) ───────────────────────────────────
@@ -59,9 +59,9 @@ public class SlotMachineOwnerScreen extends AbstractContainerScreen<SlotMachineO
     static final int COL_PANEL        = 0xFF383B47;
     static final int COL_HEADER       = 0xFF1C1E27;
     static final int COL_SEPARATOR    = 0xFF555870;
-    static final int COL_LABEL        = 0xFFCCCCCC;
+    static final int COL_LABEL        = 0xFF767676;
     static final int COL_CHANCE       = 0xFF88FF88;
-    static final int COL_HINT         = 0xFF888888;
+    static final int COL_HINT         = 0xFF2d2d2f;
     static final int COL_SLOT         = 0xFF20232B;
     static final int COL_SLOT_BORDER  = 0xFF6A7084;
     // Button colours
@@ -180,9 +180,6 @@ public class SlotMachineOwnerScreen extends AbstractContainerScreen<SlotMachineO
         drawButton(g, x + BTN_BET_STORE_X, y + BTN_NAV_Y, BTN_BET_STORE_W, BTN_NAV_H,
                 Component.translatable("slots.admin.bet_storage").getString(), mouseX, mouseY);
 
-        // "Inventory" label – adjust TEXT_INVENTORY_X / TEXT_INVENTORY_Y
-        g.drawString(font, Component.translatable("slots.admin.inventory"),
-                x + TEXT_INVENTORY_X, y + TEXT_INVENTORY_Y, COL_HINT, false);
     }
 
     /** Draws a custom button rectangle with centred label and hover highlight. */

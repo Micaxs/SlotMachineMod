@@ -38,11 +38,11 @@ public class SlotMachineBetStorageScreen extends AbstractContainerScreen<SlotMac
     // Adjust each pair to match label areas in your texture.
     private static final int TEXT_TITLE_X     = 6;  private static final int TEXT_TITLE_Y     = 3;
     private static final int TEXT_HINT_X      = 8;  private static final int TEXT_HINT_Y      = 36;
-    private static final int TEXT_INVENTORY_X = 6;  private static final int TEXT_INVENTORY_Y = 158;
+    private static final int TEXT_INVENTORY_X = 7;  private static final int TEXT_INVENTORY_Y = 155;
 
     // ── Back-button position ──────────────────────────────────────────────────
     // Adjust BTN_BACK_X / BTN_BACK_Y to move the ← Back button.
-    private static final int BTN_BACK_X = 8;  private static final int BTN_BACK_Y = 16;
+    private static final int BTN_BACK_X = 7;  private static final int BTN_BACK_Y = 10;
     private static final int BTN_BACK_W = 60; private static final int BTN_BACK_H = 14;
 
     private final Inventory playerInventory;
@@ -73,13 +73,13 @@ public class SlotMachineBetStorageScreen extends AbstractContainerScreen<SlotMac
 
         // ── Slot frames for the 6×9 storage grid ─────────────────────────────
         // Remove these if your texture already includes slot backgrounds.
-        for (int row = 0; row < STORAGE_ROWS; row++) {
-            for (int col = 0; col < 9; col++) {
-                SlotMachineOwnerScreen.drawSlotFrame(g,
-                        x + SLOT_GRID_X + col * 18,
-                        y + SLOT_GRID_Y + row * 18);
-            }
-        }
+//        for (int row = 0; row < STORAGE_ROWS; row++) {
+//            for (int col = 0; col < 9; col++) {
+//                SlotMachineOwnerScreen.drawSlotFrame(g,
+//                        x + SLOT_GRID_X + col * 18,
+//                        y + SLOT_GRID_Y + row * 18);
+//            }
+//        }
     }
 
     @Override
@@ -93,12 +93,12 @@ public class SlotMachineBetStorageScreen extends AbstractContainerScreen<SlotMac
         int y = this.topPos;
 
         // Title text – adjust TEXT_TITLE_X / TEXT_TITLE_Y
-        g.drawString(font, Component.translatable("slots.admin.bet_storage"),
-                x + TEXT_TITLE_X, y + TEXT_TITLE_Y, SlotMachineOwnerScreen.COL_LABEL, false);
-
-        // Hint text – adjust TEXT_HINT_X / TEXT_HINT_Y
-        g.drawString(font, Component.translatable("slots.admin.bet_storage_hint"),
-                x + TEXT_HINT_X, y + TEXT_HINT_Y, SlotMachineOwnerScreen.COL_HINT, false);
+//        g.drawString(font, Component.translatable("slots.admin.bet_storage"),
+//                x + TEXT_TITLE_X, y + TEXT_TITLE_Y, SlotMachineOwnerScreen.COL_LABEL, false);
+//
+//        // Hint text – adjust TEXT_HINT_X / TEXT_HINT_Y
+//        g.drawString(font, Component.translatable("slots.admin.bet_storage_hint"),
+//                x + TEXT_HINT_X, y + TEXT_HINT_Y, SlotMachineOwnerScreen.COL_HINT, false);
 
         // "Inventory" label – adjust TEXT_INVENTORY_X / TEXT_INVENTORY_Y
         g.drawString(font, Component.translatable("slots.admin.inventory"),

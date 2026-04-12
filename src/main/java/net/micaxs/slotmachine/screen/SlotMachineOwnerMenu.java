@@ -32,7 +32,7 @@ public class SlotMachineOwnerMenu extends AbstractContainerMenu {
     // Must stay in sync with SLOT_GRID_Y in SlotMachineStockScreen /
     // SlotMachineBetStorageScreen  (STORAGE_SLOT_Y = SLOT_GRID_Y + 1).
     private static final int STORAGE_SLOT_X = 8;   // x offset of first slot column
-    private static final int STORAGE_SLOT_Y = 48;  // y offset of first slot row (was 100)
+    private static final int STORAGE_SLOT_Y = 34;  // y offset of first slot row (was 100)
 
     public static SlotMachineBlockEntity blockEntity;
 
@@ -76,6 +76,8 @@ public class SlotMachineOwnerMenu extends AbstractContainerMenu {
             for (int slot = 0; slot < handler.getSlots(); slot++) {
                 int row = slot / 9;
                 int col = slot % 9;
+
+                // TODO: Adjust this to be correct
                 this.addSlot(new ToggleableSlot(handler, slot,
                         STORAGE_SLOT_X + col * 18, STORAGE_SLOT_Y + row * 18, true));
             }
@@ -88,6 +90,8 @@ public class SlotMachineOwnerMenu extends AbstractContainerMenu {
             for (int slot = 0; slot < handler.getSlots(); slot++) {
                 int row = slot / 9;
                 int col = slot % 9;
+
+                // TODO: Adjust this to be correct
                 this.addSlot(new ToggleableSlot(handler, slot,
                         STORAGE_SLOT_X + col * 18, STORAGE_SLOT_Y + row * 18, false));
             }
@@ -185,14 +189,14 @@ public class SlotMachineOwnerMenu extends AbstractContainerMenu {
     private void addPlayerInventory(Inventory playerInventory) {
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
-                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 170 + row * 18));
+                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 166 + row * 18));
             }
         }
     }
 
     private void addPlayerHotbar(Inventory playerInventory) {
         for (int col = 0; col < 9; ++col) {
-            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 228));
+            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 224));
         }
     }
 

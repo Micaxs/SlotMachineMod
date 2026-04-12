@@ -46,11 +46,11 @@ public class SlotMachineStockScreen extends AbstractContainerScreen<SlotMachineO
     // Adjust each pair to match label areas in your texture.
     private static final int TEXT_TITLE_X     = 6;  private static final int TEXT_TITLE_Y     = 3;
     private static final int TEXT_HINT_X      = 8;  private static final int TEXT_HINT_Y      = 36;
-    private static final int TEXT_INVENTORY_X = 6;  private static final int TEXT_INVENTORY_Y = 158;
+    private static final int TEXT_INVENTORY_X = 7;  private static final int TEXT_INVENTORY_Y = 155;
 
     // ── Back-button position ──────────────────────────────────────────────────
     // Adjust BTN_BACK_X / BTN_BACK_Y to move the ← Back button.
-    private static final int BTN_BACK_X = 8;  private static final int BTN_BACK_Y = 16;
+    private static final int BTN_BACK_X = 7;  private static final int BTN_BACK_Y = 10;
     private static final int BTN_BACK_W = 60; private static final int BTN_BACK_H = 14;
 
     private final Inventory playerInventory;
@@ -99,14 +99,6 @@ public class SlotMachineStockScreen extends AbstractContainerScreen<SlotMachineO
 
         int x = this.leftPos;
         int y = this.topPos;
-
-        // Title text – adjust TEXT_TITLE_X / TEXT_TITLE_Y
-        g.drawString(font, Component.translatable("slots.admin.prize_stock"),
-                x + TEXT_TITLE_X, y + TEXT_TITLE_Y, SlotMachineOwnerScreen.COL_LABEL, false);
-
-        // Hint text – adjust TEXT_HINT_X / TEXT_HINT_Y
-        g.drawString(font, Component.translatable("slots.admin.prize_stock_hint"),
-                x + TEXT_HINT_X, y + TEXT_HINT_Y, SlotMachineOwnerScreen.COL_HINT, false);
 
         // "Inventory" label – adjust TEXT_INVENTORY_X / TEXT_INVENTORY_Y
         g.drawString(font, Component.translatable("slots.admin.inventory"),
