@@ -17,35 +17,23 @@ public class Config
 {
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
-    // TODO: In future release update this to a list and support multiple items somehow.
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> VALID_GAMBLING_ITEM = BUILDER
-            .comment("A list of items to allow being gambled with, you can have a max total of 9 different items!")
+            .comment("Global fallback: items accepted as bets when no per-machine bet item is configured. Max 9 entries.")
             .defineListAllowEmpty("valid_gambling_items", List.of("minecraft:emerald"), Config::validateItemName);
-    
-    private static final ForgeConfigSpec.ConfigValue<Double> WIN_CHANCE_2 = BUILDER
-            .comment("Percentage that 2 of the same will occur in the slot machine [0.1 = 10%, 1.0 = 100%] (Range: 0.0 - 1.0)")
-            .define("double_win_chance", 0.2, Config::validateDouble);
 
     private static final ForgeConfigSpec.ConfigValue<Double> WIN_CHANCE_3 = BUILDER
-            .comment("Percentage that 3 of the same will occur in the slot machine [0.1 = 10%, 1.0 = 100%] (Range: 0.0 - 1.0)")
-            .define("triple_win_chance", 0.1, Config::validateDouble);
+            .comment("Probability of a 3-in-a-row win (e.g. 0.05 = 5%). Range: 0.0 – 1.0")
+            .define("triple_win_chance", 0.05, Config::validateDouble);
 
-    private static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_PAYOUT_AMOUNT = BUILDER
-            .comment("Set the amount of items you return when you have 2 of the same in the slots machine. (Valid Range: 1 - 8)")
-            .define("double_payout_amount", 2, Config::validateIntegerMax8);
-
-    private static final ForgeConfigSpec.ConfigValue<Integer> TRIPLE_PAYOUT_AMOUNT = BUILDER
-            .comment("Set the amount of items you return when you have 3 of the same in the slots machine. Note that setting this will prevent spinning the slot machine when the output slot + this value is more then the stack limit! Also keep this value higher than double_payout_amount (Valid Range: 1 - 16)")
-            .define("triple_payout_amount", 3, Config::validateIntegerMax16);
-
+    private static final ForgeConfigSpec.ConfigValue<Double> WIN_CHANCE_2 = BUILDER
+            .comment("Probability of a 2-in-a-row win (e.g. 0.15 = 15%). Range: 0.0 – 1.0")
+            .define("double_win_chance", 0.15, Config::validateDouble);
 
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
     public static Set<Item> validBetItems;
     public static double tripleWinChance;
     public static double doubleWinChance;
-    public static int triplePayoutAmount;
-    public static int doublePayoutAmount;
 
     private static boolean validateItemName(final Object obj) {
         return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
@@ -55,20 +43,13 @@ public class Config
         return obj instanceof final Double d && d >= 0.0 && d <= 1.0;
     }
 
-    private static boolean validateIntegerMax8(final Object obj) {
-        return obj instanceof final Integer d && d >= 1 && d <= 8;
-    }
-
-    private static boolean validateIntegerMax16(final Object obj) {
-        return obj instanceof final Integer d && d >= 1 && d <= 16;
-    }
-
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event) {
-        validBetItems = VALID_GAMBLING_ITEM.get().stream().map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName))).limit(9).collect(Collectors.toSet());
+        validBetItems = VALID_GAMBLING_ITEM.get().stream()
+                .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
+                .limit(9)
+                .collect(Collectors.toSet());
         tripleWinChance = WIN_CHANCE_3.get();
         doubleWinChance = WIN_CHANCE_2.get();
-        triplePayoutAmount = TRIPLE_PAYOUT_AMOUNT.get();
-        doublePayoutAmount = DOUBLE_PAYOUT_AMOUNT.get();
     }
 }

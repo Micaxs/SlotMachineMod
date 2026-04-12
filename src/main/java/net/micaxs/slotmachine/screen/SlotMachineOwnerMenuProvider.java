@@ -6,7 +6,6 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.SimpleContainerData;
 
 import javax.annotation.Nullable;
 
@@ -19,16 +18,14 @@ public class SlotMachineOwnerMenuProvider implements MenuProvider {
 
     @Override
     public Component getDisplayName() {
-        return Component.literal("Owner Menu");
+        return Component.translatable("slots.admin.title");
     }
 
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int i, Inventory inventory, Player player) {
-        // Create a SimpleContainerData object
-        SimpleContainerData data = new SimpleContainerData(2);
-
-        // Return your SlotMachineOwnerMenu here
-        return new SlotMachineOwnerMenu(i, inventory, slotMachineBlockEntity, data);
+        // Pass the block entity's own ContainerData so prize chances are synced via it
+        return new SlotMachineOwnerMenu(i, inventory, slotMachineBlockEntity,
+                slotMachineBlockEntity.getData());
     }
 }

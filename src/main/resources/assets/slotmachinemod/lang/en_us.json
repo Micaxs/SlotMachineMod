@@ -1,5 +1,26 @@
 {
   "block.slotmachinemod.slot_machine": "Slot Machine",
   "slots.gui.stop": "Stop",
-    "slots.gui.spin": "Spin!"
+  "slots.gui.spin": "Spin!",
+  "slots.gui.bet_label": "Bet",
+  "slots.gui.not_configured": "Not configured",
+  "slots.gui.out_of_stock": "Out of Stock",
+  "slots.gui.out_of_order": "Out of Order",
+  "slots.gui.invalid_bet": "Invalid bet",
+  "slots.gui.take_out_win": "Take out Win First!",
+  "slots.gui.you_won": "You won!",
+  "slots.gui.you_lost": "You lost!",
+  "slots.gui.prizes": "Prizes",
+  "slots.admin.title": "Slot Machine Admin",
+  "slots.admin.bet_item": "Bet Item",
+  "slots.admin.bet_hint": "Place any item to set the bet",
+  "slots.admin.prize_table": "Prize Table",
+  "slots.admin.prize_label": "Prize %s",
+  "slots.admin.inventory": "Inventory",
+  "slots.admin.prize_stock": "Prize Stock",
+  "slots.admin.prize_stock_hint": "Stock the items this machine can pay out.",
+  "slots.admin.bet_storage": "Collected Bets",
+  "slots.admin.bet_storage_hint": "Consumed wagers are stored here.",
+  "slots.admin.back": "← Back",
+  "slots.admin.not_configured": "Not configured"
 }

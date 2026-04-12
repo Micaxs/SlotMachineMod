@@ -1,5 +1,24 @@
 {
   "block.slotmachinemod.slot_machine": "老虎机",
   "slots.gui.stop": "停止",
-  "slots.gui.spin": "旋转！"
+  "slots.gui.spin": "旋转！",
+  "slots.gui.bet_label": "下注",
+  "slots.gui.not_configured": "未配置",
+  "slots.gui.out_of_stock": "缺货",
+  "slots.gui.out_of_order": "暂停服务",
+  "slots.gui.invalid_bet": "下注物品无效",
+  "slots.gui.take_out_win": "请先取出奖励！",
+  "slots.gui.you_won": "你赢了！",
+  "slots.gui.you_lost": "你输了！",
+  "slots.admin.title": "老虎机管理",
+  "slots.admin.bet_item": "下注物品",
+  "slots.admin.bet_hint": "放入任意物品以设置下注",
+  "slots.admin.prize_table": "奖励表",
+  "slots.admin.prize_label": "奖励 %s",
+  "slots.admin.inventory": "背包",
+  "slots.admin.prize_stock": "奖励库存",
+  "slots.admin.prize_stock_hint": "在此填入机器可发放的奖励。",
+  "slots.admin.bet_storage": "已收下注",
+  "slots.admin.bet_storage_hint": "消耗的下注物品会存放在这里。",
+  "slots.admin.back": "← 返回"
 }

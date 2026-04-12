@@ -1,6 +1,7 @@
 package net.micaxs.slotmachine.network;
 
 import net.micaxs.slotmachine.SlotMachineMod;
+import net.micaxs.slotmachine.network.packet.AdminConfigC2SPacket;
 import net.micaxs.slotmachine.network.packet.SlotsC2SPacket;
 import net.micaxs.slotmachine.network.packet.SlotsS2CPacket;
 import net.minecraft.resources.ResourceLocation;
@@ -28,9 +29,10 @@ public class PacketHandler {
 
         INSTANCE = net;
 
-        // Register Packet
+        // Register Packets
         net.messageBuilder(SlotsC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER).decoder(SlotsC2SPacket::new).encoder(SlotsC2SPacket::toBytes).consumerMainThread(SlotsC2SPacket::handle).add();
         net.messageBuilder(SlotsS2CPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT).decoder(SlotsS2CPacket::new).encoder(SlotsS2CPacket::toBytes).consumerMainThread(SlotsS2CPacket::handle).add();
+        net.messageBuilder(AdminConfigC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER).decoder(AdminConfigC2SPacket::new).encoder(AdminConfigC2SPacket::toBytes).consumerMainThread(AdminConfigC2SPacket::handle).add();
     }
 
     public static <MSG> void sendToServer(MSG msg) {
