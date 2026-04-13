@@ -17,6 +17,10 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("slot_machine_be",
                     () -> BlockEntityType.Builder.of(SlotMachineBlockEntity::new, ModBlocks.SLOT_MACHINE.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<ServerSlotMachineBlockEntity>> SERVER_SLOT_MACHINE_BE =
+            BLOCK_ENTITIES.register("server_slot_machine_be",
+                    () -> BlockEntityType.Builder.of(ServerSlotMachineBlockEntity::new, ModBlocks.SERVER_SLOT_MACHINE.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

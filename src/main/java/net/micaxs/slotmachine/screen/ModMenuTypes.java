@@ -22,6 +22,9 @@ public class ModMenuTypes {
     public static final RegistryObject<MenuType<SlotMachineOwnerMenu>> SLOT_MACHINE_OWNER_MENU =
             registerMenuType("slot_machine_owner_menu", SlotMachineOwnerMenu::new);
 
+    public static final RegistryObject<MenuType<ServerSlotMachineMenu>> SERVER_SLOT_MACHINE_MENU =
+            registerMenuType("server_slot_machine_menu", ServerSlotMachineMenu::new);
+
 
     private static <T extends AbstractContainerMenu> RegistryObject<MenuType<T>> registerMenuType(String name, IContainerFactory<T> factory) {
         return MENUS.register(name, () -> IForgeMenuType.create(factory));

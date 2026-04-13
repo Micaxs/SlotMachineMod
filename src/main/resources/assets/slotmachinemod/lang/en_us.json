@@ -1,5 +1,6 @@
 {
   "block.slotmachinemod.slot_machine": "Slot Machine",
+  "block.slotmachinemod.server_slot_machine": "Server Slot Machine",
   "slots.gui.stop": "Stop",
   "slots.gui.spin": "Spin!",
   "slots.gui.bet_label": "Bet",

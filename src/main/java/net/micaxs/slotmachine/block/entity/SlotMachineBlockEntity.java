@@ -459,7 +459,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
             int selectedPrize = selectWeightedPrize();
             if (selectedPrize >= 0) {
                 ItemStack prizeTemplate = prizeItemHandler.getStackInSlot(selectedPrize);
-                int desiredCount = tripleMatch ? 2 : 1;
+                int desiredCount = (Config.doubleTriplePayout && tripleMatch) ? 2 : 1;
                 int available = countMatchingItems(ownerPrizeStockHandler, prizeTemplate);
                 int actualCount = Math.min(desiredCount, available);
                 if (actualCount > 0) {

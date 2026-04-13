@@ -6,6 +6,7 @@ import net.micaxs.slotmachine.block.ModItems;
 import net.micaxs.slotmachine.block.entity.ModBlockEntities;
 import net.micaxs.slotmachine.network.PacketHandler;
 import net.micaxs.slotmachine.screen.ModMenuTypes;
+import net.micaxs.slotmachine.screen.ServerSlotMachineScreen;
 import net.micaxs.slotmachine.screen.SlotMachineOwnerMenu;
 import net.micaxs.slotmachine.screen.SlotMachineOwnerScreen;
 import net.micaxs.slotmachine.screen.SlotMachineScreen;
@@ -53,6 +54,7 @@ public class SlotMachineMod
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(ModBlocks.SLOT_MACHINE);
+            event.accept(ModBlocks.SERVER_SLOT_MACHINE);
         }
     }
 
@@ -69,6 +71,7 @@ public class SlotMachineMod
         {
             MenuScreens.register(ModMenuTypes.SLOT_MACHINE_MENU.get(), SlotMachineScreen::new);
             MenuScreens.register(ModMenuTypes.SLOT_MACHINE_OWNER_MENU.get(), SlotMachineOwnerScreen::new);
+            MenuScreens.register(ModMenuTypes.SERVER_SLOT_MACHINE_MENU.get(), ServerSlotMachineScreen::new);
         }
     }
 }
