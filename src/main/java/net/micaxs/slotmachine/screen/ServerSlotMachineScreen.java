@@ -5,14 +5,20 @@ import net.micaxs.slotmachine.Config;
 import net.micaxs.slotmachine.SlotMachineMod;
 import net.micaxs.slotmachine.block.entity.ServerSlotMachineBlockEntity;
 import net.micaxs.slotmachine.network.PacketHandler;
+import net.micaxs.slotmachine.network.packet.ServerClaimPayoutC2SPacket;
 import net.micaxs.slotmachine.network.packet.ServerSlotsC2SPacket;
+import net.micaxs.slotmachine.sound.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
@@ -23,11 +29,23 @@ import java.util.Random;
 public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotMachineMenu> {
 
     private static final long COOLDOWN = 1000;
+    /** Delay (ms) before the first reel stops after receiving server results. */
+    private static final long INITIAL_REVEAL_DELAY = 300;
+    /** Delay (ms) between each successive reel stopping. */
+    private static final long REEL_STOP_DELAY = 600;
+
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_machine_gui.png");
 
     private long lastClickTime = 0;
     private int[] results = new int[3];
+    /** Non-null while the sequential stop animation is in progress. */
+    private int[] finalResults = null;
+    private long revealStartTime = 0;
+    /** True from the moment the stop button is clicked until the server result arrives. */
+    private boolean stopPressed = false;
+    /** The currently-playing looping spin sound; null when not spinning. */
+    private SoundInstance spinningSound = null;
     private Button spinButton;
     private Button stopButton;
     private Component message = Component.empty();
@@ -50,6 +68,9 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
                 ServerSlotMachineBlockEntity.RESULT_INVALID_BET,
                 ServerSlotMachineBlockEntity.RESULT_INVALID_BET,
                 ServerSlotMachineBlockEntity.RESULT_INVALID_BET};
+        this.finalResults = null;
+        this.stopPressed = false;
+        stopSpinningSound(); // clean up if screen was resized while spinning
         refreshServiceMessage();
 
         this.spinButton = this.addRenderableWidget(new Button.Builder(
@@ -68,14 +89,114 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
 
         this.stopButton = this.addRenderableWidget(new Button.Builder(
                 Component.translatable("slots.gui.stop"),
-                pButton -> PacketHandler.sendToServer(new ServerSlotsC2SPacket(ServerSlotMachineMenu.blockEntity.getBlockPos(), false))
+                pButton -> {
+                    stopPressed = true;
+                    PacketHandler.sendToServer(new ServerSlotsC2SPacket(ServerSlotMachineMenu.blockEntity.getBlockPos(), false));
+                }
         ).pos(x + 64, y + 68).size(44, 11).build());
     }
 
     public void updateResults(int[] newResults) {
-        this.results = newResults;
-        this.message = getResultMessage();
-        this.outOfService = isServiceStateResult(newResults);
+        // {0,0,0} = server confirming the spin started; already showing spinning reels.
+        boolean allSpinning = newResults.length == 3
+                && newResults[0] == ServerSlotMachineBlockEntity.RESULT_SPINNING
+                && newResults[1] == ServerSlotMachineBlockEntity.RESULT_SPINNING
+                && newResults[2] == ServerSlotMachineBlockEntity.RESULT_SPINNING;
+        if (allSpinning) {
+            // Server confirmed the bet was valid — now it is safe to start the sound.
+            startSpinningSound();
+            return;
+        }
+
+        // Any real result clears the stop-pressed guard.
+        this.stopPressed = false;
+
+        // Special / service-state codes: show immediately with no animation.
+        if (getSpecialResultCode(newResults) != -1) {
+            this.finalResults = null;
+            this.results = newResults;
+            this.message = getResultMessage();
+            this.outOfService = isServiceStateResult(newResults);
+        } else {
+            // Normal fruit-symbol result: start sequential stop animation.
+            this.finalResults = Arrays.copyOf(newResults, newResults.length);
+            this.revealStartTime = System.currentTimeMillis();
+            this.results = new int[]{
+                    ServerSlotMachineBlockEntity.RESULT_SPINNING,
+                    ServerSlotMachineBlockEntity.RESULT_SPINNING,
+                    ServerSlotMachineBlockEntity.RESULT_SPINNING};
+            this.message = Component.empty();
+            this.outOfService = false;
+        }
+    }
+
+    /** Advances the sequential stop animation each render frame. */
+    private void tickRevealAnimation() {
+        if (finalResults == null) return;
+        long elapsed = System.currentTimeMillis() - revealStartTime;
+
+        if (elapsed >= INITIAL_REVEAL_DELAY
+                && results[0] == ServerSlotMachineBlockEntity.RESULT_SPINNING) {
+            results[0] = finalResults[0];
+            playReelStopSound();
+        }
+        if (elapsed >= INITIAL_REVEAL_DELAY + REEL_STOP_DELAY
+                && results[1] == ServerSlotMachineBlockEntity.RESULT_SPINNING) {
+            results[1] = finalResults[1];
+            playReelStopSound();
+        }
+        if (elapsed >= INITIAL_REVEAL_DELAY + REEL_STOP_DELAY * 2
+                && results[2] == ServerSlotMachineBlockEntity.RESULT_SPINNING) {
+            results[2] = finalResults[2];
+            playReelStopSound();
+            stopSpinningSound();
+            this.message = getResultMessage();
+            this.outOfService = isServiceStateResult(results);
+            this.finalResults = null;
+            // Tell the server the animation is done so it moves the prize into the output slot.
+            PacketHandler.sendToServer(new ServerClaimPayoutC2SPacket(ServerSlotMachineMenu.blockEntity.getBlockPos()));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Sound helpers
+    // -------------------------------------------------------------------------
+
+    /** Starts playing the looping spinning.ogg. Stops any previous instance first. */
+    private void startSpinningSound() {
+        stopSpinningSound();
+        spinningSound = new SimpleSoundInstance(
+                ModSounds.SPINNING.get().getLocation(),
+                SoundSource.MASTER,
+                1.0f, 1.0f,
+                RandomSource.create(),
+                true,  // loop
+                0,
+                SoundInstance.Attenuation.NONE,
+                0.0, 0.0, 0.0,
+                true   // relative (non-positional)
+        );
+        Minecraft.getInstance().getSoundManager().play(spinningSound);
+    }
+
+    /** Stops the looping spinning sound if one is playing. */
+    private void stopSpinningSound() {
+        if (spinningSound != null) {
+            Minecraft.getInstance().getSoundManager().stop(spinningSound);
+            spinningSound = null;
+        }
+    }
+
+    /** Plays the short stop.ogg reel-click sound once. */
+    private void playReelStopSound() {
+        Minecraft.getInstance().getSoundManager().play(
+                SimpleSoundInstance.forUI(ModSounds.REEL_STOP.get(), 1.0f));
+    }
+
+    @Override
+    public void onClose() {
+        stopSpinningSound();
+        super.onClose();
     }
 
     private void refreshServiceMessage() {
@@ -88,10 +209,17 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
             return;
         }
 
+        // Don't interrupt an active spin or reveal animation with a service-state check.
+        if (isSpinning() || finalResults != null) return;
+
         boolean wasOutOfService = outOfService;
         int serviceState = menu.getServiceState();
         outOfService = serviceState != ServerSlotMachineBlockEntity.SERVICE_READY;
         if (outOfService) {
+            // Cancel any ongoing reveal animation and show the service state immediately.
+            this.finalResults = null;
+            this.stopPressed = false;
+            stopSpinningSound();
             this.results = resultForServiceState(serviceState);
             this.message = getResultMessage();
         } else if (wasOutOfService) {
@@ -178,33 +306,32 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
         }
 
         if (!outOfService) {
-            if (!isSpinning()) {
-                drawSlotImageInSlot(guiGraphics, x + 59, y + 21, results[0]);
-                drawSlotImageInSlot(guiGraphics, x + 78, y + 21, results[1]);
-                drawSlotImageInSlot(guiGraphics, x + 97, y + 21, results[2]);
-            } else {
-                renderSlotWheels(guiGraphics, x, y);
-            }
+            // Each reel is rendered individually: still spinning → random image, stopped → final symbol.
+            renderReel(guiGraphics, x + 59, y + 21, results[0]);
+            renderReel(guiGraphics, x + 78, y + 21, results[1]);
+            renderReel(guiGraphics, x + 97, y + 21, results[2]);
         }
     }
 
-    private void renderSlotWheels(GuiGraphics guiGraphics, int x, int y) {
-        drawRandomImage(guiGraphics, x + 59, y + 21);
-        drawRandomImage(guiGraphics, x + 78, y + 21);
-        drawRandomImage(guiGraphics, x + 97, y + 21);
+    /** Renders a single reel: a random spinning image if still spinning, or the final symbol. */
+    private void renderReel(GuiGraphics guiGraphics, int x, int y, int result) {
+        if (result == ServerSlotMachineBlockEntity.RESULT_SPINNING) {
+            drawRandomImage(guiGraphics, x, y);
+        } else {
+            drawSlotImageInSlot(guiGraphics, x, y, result);
+        }
     }
 
-    private void drawSlotImageInSlot(GuiGraphics guiGraphics, int x, int y, int slotImage) {
-        List<ResourceLocation> images = Arrays.asList(
-                new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_banana.png"),
-                new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_bar.png"),
-                new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_cherry.png"),
-                new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_orange.png"),
-                new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_strawberry.png"),
-                new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_empty.png")
-        );
-        int imageIndex = Math.max(1, Math.min(slotImage, images.size())) - 1;
-        drawImage(guiGraphics, images.get(imageIndex), x, y);
+    private void drawSlotImageInSlot(GuiGraphics guiGraphics, int x, int y, int result) {
+        ResourceLocation image = switch (result) {
+            case 1 -> new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_banana.png");
+            case 2 -> new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_bar.png");
+            case 3 -> new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_cherry.png");
+            case 4 -> new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_orange.png");
+            case 5 -> new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_strawberry.png");
+            default -> new ResourceLocation(SlotMachineMod.MOD_ID, "textures/gui/slot_banana.png");
+        };
+        drawImage(guiGraphics, image, x, y);
     }
 
     private void drawRandomImage(GuiGraphics guiGraphics, int x, int y) {
@@ -222,6 +349,15 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
         guiGraphics.blit(image, x, y, 0, 0, 16, 43, 16, 43);
     }
 
+    /** Formats a chance value for display: whole numbers show without decimals, fractions keep up to 2 decimal places. */
+    private static String formatChance(double chance) {
+        if (chance == Math.floor(chance)) {
+            return (int) chance + "%";
+        }
+        // Strip trailing zeros (e.g. 2.50 → "2.5%", 0.25 → "0.25%")
+        return String.valueOf(Math.round(chance * 100.0) / 100.0) + "%";
+    }
+
     /** Renders the "Prizes" side-panel (from config). */
     private void renderPrizesPanel(GuiGraphics g, int mouseX, int mouseY) {
         List<Config.ServerPrize> prizes = menu.getServerPrizes();
@@ -236,14 +372,13 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
         final int rowH = 20;
         final int panelW = 90;
 
-        // Tooltip hit detection in screen coordinates
         ItemStack tooltipStack = null;
         int tooltipX = 0, tooltipY = 0;
         for (int i = 0; i < prizes.size(); i++) {
             int iconScreenY = panelY + Math.round((13 + i * rowH) * SCALE);
             if (mouseX >= panelX && mouseX < panelX + 8
                     && mouseY >= iconScreenY && mouseY < iconScreenY + 8) {
-                tooltipStack = prizes.get(i).toStack(1);
+                tooltipStack = prizes.get(i).toStack(prizes.get(i).amount());
                 tooltipX = mouseX;
                 tooltipY = mouseY;
             }
@@ -258,7 +393,7 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
 
         for (int i = 0; i < prizes.size(); i++) {
             Config.ServerPrize prize = prizes.get(i);
-            ItemStack stack = prize.toStack(1);
+            ItemStack stack = prize.toStack(prize.amount());
             int rowY = 13 + i * rowH;
 
             g.renderItem(stack, 0, rowY);
@@ -272,8 +407,8 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
                 }
                 name += "..";
             }
-            g.drawString(font, name,                19, rowY + 2,  0xFFFFFF, false);
-            g.drawString(font, prize.chance() + "%", 19, rowY + 11, 0x55FF55, false);
+            g.drawString(font, name,                          19, rowY + 2,  0xFFFFFF, false);
+            g.drawString(font, formatChance(prize.chance()),  19, rowY + 11, 0x55FF55, false);
         }
 
         pose.popPose();
@@ -286,11 +421,13 @@ public class ServerSlotMachineScreen extends AbstractContainerScreen<ServerSlotM
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
         renderBackground(guiGraphics);
+        tickRevealAnimation();
         refreshServiceMessage();
 
+        boolean isRevealing = finalResults != null;
         boolean outputFull = getSpecialResultCode(results) == ServerSlotMachineBlockEntity.RESULT_TAKE_OUT_WIN;
-        stopButton.visible = !outOfService && !outputFull && isSpinning();
-        spinButton.visible = !outOfService && !outputFull && !stopButton.visible;
+        stopButton.visible = !outOfService && !outputFull && !isRevealing && !stopPressed && isSpinning();
+        spinButton.visible = !outOfService && !outputFull && !isRevealing && !stopPressed && !stopButton.visible;
 
         super.render(guiGraphics, mouseX, mouseY, delta);
         renderTooltip(guiGraphics, mouseX, mouseY);

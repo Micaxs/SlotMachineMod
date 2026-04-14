@@ -46,10 +46,14 @@ public class Config
             .define("server_bet_item", "minecraft:emerald", Config::validateItemName);
 
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> SERVER_PRIZES = BUILDER
-            .comment("Prizes for the server slot machine. Format: 'namespace:item|chance' where chance is 0–100.\n" +
-                     "Example: [\"minecraft:diamond|10\", \"minecraft:emerald|5\"]")
+            .comment("Prizes for the server slot machine.\n" +
+                     "Format: 'namespace:item|amount|chance'\n" +
+                     "  amount – number of items awarded on a win (1–32; max 32 so a double payout returns 64, filling one full stack)\n" +
+                     "  chance – win weight 0–100, decimals supported (e.g. 0.25, 2.50)\n" +
+                     "Example: [\"minecraft:diamond|16|10\", \"minecraft:emerald|8|0.25\"]\n" +
+                     "Legacy 2-part format 'namespace:item|chance' is also accepted and defaults amount to 1.")
             .defineListAllowEmpty("server_prizes",
-                    List.of("minecraft:diamond|10", "minecraft:emerald|5"),
+                    List.of("minecraft:gold_ingot|2|5", "minecraft:diamond|1|5"),
                     Config::validatePrizeEntry);
 
     private static final ForgeConfigSpec.ConfigValue<Double> SERVER_WIN_CHANCE_3 = BUILDER
@@ -78,8 +82,14 @@ public class Config
     public static double serverDoubleWinChance;
     public static boolean serverShowPrizePanel;
 
-    /** Represents one prize entry for the server slot machine. */
-    public record ServerPrize(Item item, int chance) {
+    /**
+     * Represents one prize entry for the server slot machine.
+     *
+     * @param amount base number of items awarded on a win (1–32).
+     *               Max is 32 so that a double-payout triple match returns 64 (one full stack).
+     * @param chance relative win weight (0.0–100.0); supports decimals e.g. {@code 0.25}, {@code 2.50}.
+     */
+    public record ServerPrize(Item item, int amount, double chance) {
         public ItemStack toStack(int count) {
             return new ItemStack(item, count);
         }
@@ -102,17 +112,34 @@ public class Config
     private static boolean validatePrizeEntry(final Object obj) {
         if (!(obj instanceof String s)) return false;
         String[] parts = s.split("\\|");
-        if (parts.length != 2) return false;
+        if (parts.length != 2 && parts.length != 3) return false;
         try {
             new ResourceLocation(parts[0].trim()); // validate ResourceLocation format only
         } catch (Exception e) {
             return false;
         }
-        try {
-            int chance = Integer.parseInt(parts[1].trim());
-            return chance >= 0 && chance <= 100;
-        } catch (NumberFormatException e) {
-            return false;
+        if (parts.length == 3) {
+            // New format: item|amount|chance
+            try {
+                int amount = Integer.parseInt(parts[1].trim());
+                if (amount < 1 || amount > 32) return false; // max 32 so double payout fits in a stack of 64
+            } catch (NumberFormatException e) {
+                return false;
+            }
+            try {
+                double chance = Double.parseDouble(parts[2].trim());
+                return chance >= 0.0 && chance <= 100.0;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        } else {
+            // Legacy format: item|chance (amount defaults to 1)
+            try {
+                double chance = Double.parseDouble(parts[1].trim());
+                return chance >= 0.0 && chance <= 100.0;
+            } catch (NumberFormatException e) {
+                return false;
+            }
         }
     }
 
@@ -132,10 +159,18 @@ public class Config
                 .map(entry -> {
                     String[] parts = entry.split("\\|");
                     Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(parts[0].trim()));
-                    int chance = Integer.parseInt(parts[1].trim());
-                    return new ServerPrize(item, chance);
+                    if (parts.length == 3) {
+                        // New format: item|amount|chance
+                        int amount = Math.min(32, Math.max(1, Integer.parseInt(parts[1].trim())));
+                        double chance = Double.parseDouble(parts[2].trim());
+                        return new ServerPrize(item, amount, chance);
+                    } else {
+                        // Legacy format: item|chance (amount defaults to 1)
+                        double chance = Double.parseDouble(parts[1].trim());
+                        return new ServerPrize(item, 1, chance);
+                    }
                 })
-                .filter(p -> p.item() != null && p.chance() > 0)
+                .filter(p -> p.item() != null && p.chance() > 0.0)
                 .collect(Collectors.toList());
         serverTripleWinChance = SERVER_WIN_CHANCE_3.get();
         serverDoubleWinChance = SERVER_WIN_CHANCE_2.get();

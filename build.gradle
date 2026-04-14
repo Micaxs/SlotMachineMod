@@ -120,6 +120,10 @@ repositories {
     // flatDir {
     //     dir 'libs'
     // }
+    maven {
+        url "https://cursemaven.com"
+    }
+
 }
 
 dependencies {
@@ -144,6 +148,9 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+    implementation fg.deobf("curse.maven:dragonite-gear-1027400:6051328")
+
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

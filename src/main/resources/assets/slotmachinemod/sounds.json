@@ -1,0 +1,16 @@
+{
+  "spinning": {
+    "sounds": [
+      {
+        "name": "slotmachinemod:spinning",
+        "stream": true
+      }
+    ]
+  },
+  "reel_stop": {
+    "sounds": [
+      "slotmachinemod:stop"
+    ]
+  }
+}
+

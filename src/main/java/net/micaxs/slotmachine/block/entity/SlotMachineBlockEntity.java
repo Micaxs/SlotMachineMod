@@ -119,17 +119,14 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
          * Prevent NBT from resizing this handler below its declared size.
          * Old saves stored 27 slots; we keep the new size (54) and migrate the
          * existing items into the first N slots automatically.
+         * The injected "Size" also forces the parent to reset the stacks array on
+         * each sync, preventing stale client-side items after the stock runs out.
          */
         @Override
         public void deserializeNBT(net.minecraft.nbt.CompoundTag nbt) {
-            net.minecraft.nbt.ListTag tagList = nbt.getList("Items", net.minecraft.nbt.Tag.TAG_COMPOUND);
-            for (int i = 0; i < tagList.size(); i++) {
-                net.minecraft.nbt.CompoundTag itemTag = tagList.getCompound(i);
-                int slot = itemTag.getInt("Slot");
-                if (slot >= 0 && slot < getSlots()) {
-                    setStackInSlot(slot, ItemStack.of(itemTag));
-                }
-            }
+            net.minecraft.nbt.CompoundTag adjusted = nbt.copy();
+            adjusted.putInt("Size", getSlots());
+            super.deserializeNBT(adjusted);
         }
     };
 
@@ -145,20 +142,26 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         }
 
         /**
-         * Prevent NBT from resizing this handler below its declared size.
-         * Old saves stored 27 slots; we keep the new size (54) and migrate the
-         * existing items into the first N slots automatically.
+         * Same fix as ownerPrizeStockHandler: force the declared size so the parent
+         * resets the stacks array on every sync, preventing stale client-side data.
          */
         @Override
         public void deserializeNBT(net.minecraft.nbt.CompoundTag nbt) {
-            net.minecraft.nbt.ListTag tagList = nbt.getList("Items", net.minecraft.nbt.Tag.TAG_COMPOUND);
-            for (int i = 0; i < tagList.size(); i++) {
-                net.minecraft.nbt.CompoundTag itemTag = tagList.getCompound(i);
-                int slot = itemTag.getInt("Slot");
-                if (slot >= 0 && slot < getSlots()) {
-                    setStackInSlot(slot, ItemStack.of(itemTag));
-                }
-            }
+            net.minecraft.nbt.CompoundTag adjusted = nbt.copy();
+            adjusted.putInt("Size", getSlots());
+            super.deserializeNBT(adjusted);
+        }
+    };
+
+    /**
+     * Temporarily holds won prize items after {@link #stopSpin()} until the client's reel-stop
+     * animation finishes and sends a {@code ClaimPayoutC2SPacket}.  Items are then moved to the
+     * player-facing {@link #OUTPUT_SLOT} by {@link #releasePayout()}.
+     */
+    private final ItemStackHandler pendingPayoutHandler = new ItemStackHandler(1) {
+        @Override
+        public int getSlotLimit(int slot) {
+            return Integer.MAX_VALUE; // temporary staging – no stack-size restriction needed
         }
     };
 
@@ -356,6 +359,8 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int pContainerId, Inventory pPlayerInventory, Player pPlayer) {
+        // Release any pending payout so the player always sees their items when the screen opens.
+        releasePayout();
         return new SlotMachineMenu(pContainerId, pPlayerInventory, this, this.data);
     }
 
@@ -366,6 +371,7 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         pTag.put("prizeItems", prizeItemHandler.serializeNBT());
         pTag.put("prizeStock", ownerPrizeStockHandler.serializeNBT());
         pTag.put("betStorage", ownerBetStorageHandler.serializeNBT());
+        pTag.put("pendingPayout", pendingPayoutHandler.serializeNBT());
         pTag.putIntArray("prizeChances", prizeChances);
         pTag.putInt("slot_machine.stopped", stopped);
         if (ownerUUID != null) {
@@ -382,6 +388,9 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
         prizeItemHandler.deserializeNBT(pTag.getCompound("prizeItems"));
         ownerPrizeStockHandler.deserializeNBT(pTag.getCompound("prizeStock"));
         ownerBetStorageHandler.deserializeNBT(pTag.getCompound("betStorage"));
+        if (pTag.contains("pendingPayout")) {
+            pendingPayoutHandler.deserializeNBT(pTag.getCompound("pendingPayout"));
+        }
         if (pTag.contains("prizeChances")) {
             int[] saved = pTag.getIntArray("prizeChances");
             for (int i = 0; i < NUM_PRIZES && i < saved.length; i++) {
@@ -418,6 +427,9 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     public int[] startSpin() {
+        // Ensure any un-claimed payout from a previous spin is visible before the TAKE_OUT_WIN check.
+        releasePayout();
+
         ItemStack potentialBet = itemHandler.getStackInSlot(INPUT_SLOT);
         int serviceState = getServiceState();
 
@@ -466,7 +478,9 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
                     ItemStack payout = prizeTemplate.copy();
                     payout.setCount(actualCount);
                     extractPrizeFromStock(payout);
-                    awardPrize(payout.copy());
+                    // Park the prize; it is moved to the player output slot only after the
+                    // client animation completes (via ClaimPayoutC2SPacket → releasePayout()).
+                    pendingPayoutHandler.setStackInSlot(0, payout.copy());
                 }
                 stopped = 1;
                 markInventoryChanged();
@@ -536,6 +550,20 @@ public class SlotMachineBlockEntity extends BlockEntity implements MenuProvider 
     /** Returns true when the player-output slot contains an item. */
     public boolean hasOutputItem() {
         return !itemHandler.getStackInSlot(OUTPUT_SLOT).isEmpty();
+    }
+
+    /**
+     * Moves any item in {@link #pendingPayoutHandler} into the player-facing output slot
+     * (or drops it at the block if the slot is occupied).  Safe to call multiple times;
+     * does nothing when the pending handler is empty.
+     */
+    public void releasePayout() {
+        ItemStack pending = pendingPayoutHandler.getStackInSlot(0);
+        if (!pending.isEmpty()) {
+            pendingPayoutHandler.setStackInSlot(0, ItemStack.EMPTY);
+            awardPrize(pending);
+            markInventoryChanged();
+        }
     }
 
     private void awardPrize(ItemStack prize) {

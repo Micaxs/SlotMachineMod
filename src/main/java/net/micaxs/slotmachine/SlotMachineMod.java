@@ -10,6 +10,7 @@ import net.micaxs.slotmachine.screen.ServerSlotMachineScreen;
 import net.micaxs.slotmachine.screen.SlotMachineOwnerMenu;
 import net.micaxs.slotmachine.screen.SlotMachineOwnerScreen;
 import net.micaxs.slotmachine.screen.SlotMachineScreen;
+import net.micaxs.slotmachine.sound.ModSounds;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -41,6 +42,7 @@ public class SlotMachineMod
         ModBlocks.register(modEventBus);
         ModBlockEntities.register(modEventBus);
         ModMenuTypes.register(modEventBus);
+        ModSounds.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);

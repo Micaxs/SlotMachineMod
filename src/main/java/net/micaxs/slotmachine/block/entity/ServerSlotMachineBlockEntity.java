@@ -62,6 +62,17 @@ public class ServerSlotMachineBlockEntity extends BlockEntity implements MenuPro
         }
     };
 
+    /**
+     * Temporarily holds won prize items after {@link #stopSpin()} until the client's reel-stop
+     * animation finishes and sends a {@code ServerClaimPayoutC2SPacket}.
+     */
+    private final ItemStackHandler pendingPayoutHandler = new ItemStackHandler(1) {
+        @Override
+        public int getSlotLimit(int slot) {
+            return Integer.MAX_VALUE;
+        }
+    };
+
     private LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.empty();
 
     private int stopped = 1;
@@ -117,6 +128,19 @@ public class ServerSlotMachineBlockEntity extends BlockEntity implements MenuPro
         return !itemHandler.getStackInSlot(OUTPUT_SLOT).isEmpty();
     }
 
+    /**
+     * Moves any item in {@link #pendingPayoutHandler} into the player-facing output slot
+     * (or drops it at the block if the slot is occupied). Safe to call multiple times.
+     */
+    public void releasePayout() {
+        ItemStack pending = pendingPayoutHandler.getStackInSlot(0);
+        if (!pending.isEmpty()) {
+            pendingPayoutHandler.setStackInSlot(0, ItemStack.EMPTY);
+            awardPrize(pending);
+            markInventoryChanged();
+        }
+    }
+
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
         if (cap == ForgeCapabilities.ITEM_HANDLER) {
@@ -145,12 +169,14 @@ public class ServerSlotMachineBlockEntity extends BlockEntity implements MenuPro
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int pContainerId, Inventory pPlayerInventory, Player pPlayer) {
+        releasePayout(); // release any pending payout if the player re-opens the screen mid-animation
         return new ServerSlotMachineMenu(pContainerId, pPlayerInventory, this, this.data);
     }
 
     @Override
     protected void saveAdditional(CompoundTag pTag) {
         pTag.put("inventory", itemHandler.serializeNBT());
+        pTag.put("pendingPayout", pendingPayoutHandler.serializeNBT());
         pTag.putInt("slot_machine.stopped", stopped);
         super.saveAdditional(pTag);
     }
@@ -159,6 +185,9 @@ public class ServerSlotMachineBlockEntity extends BlockEntity implements MenuPro
     public void load(CompoundTag pTag) {
         super.load(pTag);
         itemHandler.deserializeNBT(pTag.getCompound("inventory"));
+        if (pTag.contains("pendingPayout")) {
+            pendingPayoutHandler.deserializeNBT(pTag.getCompound("pendingPayout"));
+        }
         stopped = pTag.getInt("slot_machine.stopped");
     }
 
@@ -186,6 +215,9 @@ public class ServerSlotMachineBlockEntity extends BlockEntity implements MenuPro
     }
 
     public int[] startSpin() {
+        // Ensure any un-claimed payout from a previous spin is visible before the TAKE_OUT_WIN check.
+        releasePayout();
+
         ItemStack potentialBet = itemHandler.getStackInSlot(INPUT_SLOT);
 
         if (!isConfigured()) {
@@ -219,9 +251,12 @@ public class ServerSlotMachineBlockEntity extends BlockEntity implements MenuPro
             int selectedPrize = selectWeightedPrize();
             if (selectedPrize >= 0) {
                 Config.ServerPrize prize = Config.serverPrizes.get(selectedPrize);
-                int count = (Config.doubleTriplePayout && tripleMatch) ? 2 : 1;
+                // Base payout = prize.amount() (max 32).
+                // Double-payout on triple match: prize.amount() * 2 (max 64, one full stack).
+                int count = (Config.doubleTriplePayout && tripleMatch) ? prize.amount() * 2 : prize.amount();
                 ItemStack payout = prize.toStack(count);
-                awardPrize(payout);
+                // Park the prize; released after the client animation via ServerClaimPayoutC2SPacket.
+                pendingPayoutHandler.setStackInSlot(0, payout.copy());
                 stopped = 1;
                 markInventoryChanged();
                 return createCosmeticReels(true, tripleMatch);
@@ -236,14 +271,14 @@ public class ServerSlotMachineBlockEntity extends BlockEntity implements MenuPro
     private int selectWeightedPrize() {
         if (Config.serverPrizes == null || Config.serverPrizes.isEmpty()) return -1;
 
-        int totalWeight = 0;
+        double totalWeight = 0;
         for (Config.ServerPrize prize : Config.serverPrizes) {
             totalWeight += prize.chance();
         }
         if (totalWeight <= 0) return -1;
 
-        int rand = (int) (Math.random() * totalWeight);
-        int cumulative = 0;
+        double rand = Math.random() * totalWeight;
+        double cumulative = 0;
         for (int i = 0; i < Config.serverPrizes.size(); i++) {
             cumulative += Config.serverPrizes.get(i).chance();
             if (rand < cumulative) {
@@ -300,9 +335,11 @@ public class ServerSlotMachineBlockEntity extends BlockEntity implements MenuPro
         return new int[]{result, result, result};
     }
 
-    /** Drop items currently in the input/output slots. */
+    /** Drop items currently in the input/output slots and any pending payout. */
     public void drops() {
         if (level == null || level.isClientSide) return;
+        // Release pending payout into the output slot first so it gets dropped too.
+        releasePayout();
         SimpleContainer inventory = new SimpleContainer(itemHandler.getSlots());
         for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
             inventory.setItem(slot, itemHandler.getStackInSlot(slot));
